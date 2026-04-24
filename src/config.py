@@ -109,6 +109,6 @@ HOURLY_REPORT_TOP_N = _env_int("HOURLY_REPORT_TOP_N", 25)
 RUNTIME_DATA_BRANCH = os.getenv("RUNTIME_DATA_BRANCH", "runtime-data")
 
 
-# Binance API
-BINANCE_FUTURES_BASE = "https://fapi.binance.com"
-BINANCE_SPOT_BASE = "https://api.binance.com"
+# Bybit API (USDT Perpetual)
+BYBIT_BASE = "https://api.bybit.com"
+BYBIT_V5_BASE = "https://api.bybit.com/v5"
