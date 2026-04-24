@@ -275,7 +275,7 @@ function renderWorkflowCards(runs) {
           <span class="pill pill-${statusTone(state)}">${state}</span>
         </div>
         <div class="metric-subtle">
-          Run #${run.run_number} • ${formatRelative(run.updated_at)} • ${formatDate(run.updated_at)}
+          Run #${run.run_number} &middot; ${formatRelative(run.updated_at)} &middot; ${formatDate(run.updated_at)}
         </div>
         <div class="metric-subtle">
           <a class="runtime-link" href="${run.html_url}" target="_blank" rel="noreferrer">View run</a>
@@ -641,7 +641,7 @@ function renderShell(repo, payload, runs, runtimeFiles, bootstrap, runtimePayloa
   els.repoVisibility.textContent = repo?.private ? "PRIVATE REPO" : "PUBLIC REPO";
   els.headlineText.textContent = headline;
   els.summaryPreview.textContent = payload.summary_markdown;
-  els.footerStatus.textContent = `${headline} • Last repo push ${formatRelative(repo?.pushed_at)}`;
+  els.footerStatus.textContent = `${headline} | Last repo push ${formatRelative(repo?.pushed_at)}`;
 
   if (scanner.status === "healthy") {
     setLivePill("LIVE", "good");
