@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-04-24T14:02:42.870535+00:00",
+  "generated_at": "2026-04-24T14:59:54.871249+00:00",
   "dashboard_name": "Azalyst Coinglass Scanner",
   "source_mode": "github_actions",
   "scanner": {
-    "timestamp": "2026-04-24T14:02:42.207450+00:00",
+    "timestamp": "2026-04-24T14:59:54.691206+00:00",
     "status": "degraded",
     "headline": "All symbol scans failed before producing usable rows.",
     "symbols_attempted": 20,
