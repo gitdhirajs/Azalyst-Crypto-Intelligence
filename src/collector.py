@@ -1,0 +1,313 @@
+"""
+Data Collector v2.0 — Dynamically discovers ALL Binance USDT perpetual futures,
+filters by volume/OI, then pulls klines, RSI, and Open Interest.
+All public endpoints, no API key needed.
+"""
+import time
+import requests
+import pandas as pd
+import numpy as np
+from datetime import datetime, timezone
+from typing import Optional, List
+from src.config import (
+    BINANCE_FUTURES_BASE, TIMEFRAMES, KLINE_LIMIT, RSI_PERIOD,
+    MIN_VOLUME_24H_USDT, MIN_OI_USDT, EXCLUDED_SYMBOLS,
+    MAX_SYMBOLS_PER_SCAN, REQUEST_DELAY, BATCH_DELAY
+)
+
+SESSION = requests.Session()
+SESSION.headers.update({"User-Agent": "CryptoScanner/2.0"})
+
+
+# ──────────────────────────────────────────────────────────
+#  Dynamic symbol discovery — ALL Binance USDT perps
+# ──────────────────────────────────────────────────────────
+def fetch_all_futures_symbols() -> List[str]:
+    """
+    Fetch ALL active USDT-margined perpetual futures pairs from Binance.
+    Returns a sorted list like ['1000BONKUSDT', 'AAVEUSDT', 'BTCUSDT', ...].
+    """
+    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/exchangeInfo"
+    try:
+        r = SESSION.get(url, timeout=15)
+        r.raise_for_status()
+        data = r.json()
+        symbols = []
+        for s in data.get("symbols", []):
+            if (s.get("status") == "TRADING"
+                    and s.get("contractType") == "PERPETUAL"
+                    and s.get("quoteAsset") == "USDT"
+                    and s["symbol"] not in EXCLUDED_SYMBOLS):
+                symbols.append(s["symbol"])
+        return sorted(symbols)
+    except Exception as e:
+        print(f"  [ERR] Failed to fetch exchange info: {e}")
+        return []
+
+
+def fetch_all_tickers_bulk() -> dict:
+    """
+    Fetch 24h ticker data for ALL futures pairs in ONE API call.
+    Returns dict: { 'BTCUSDT': {price, volume_24h, ...}, ... }
+    """
+    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/ticker/24hr"
+    try:
+        r = SESSION.get(url, timeout=15)
+        r.raise_for_status()
+        data = r.json()
+        tickers = {}
+        for d in data:
+            tickers[d["symbol"]] = {
+                "price": float(d["lastPrice"]),
+                "price_change_pct_24h": float(d["priceChangePercent"]),
+                "high_24h": float(d["highPrice"]),
+                "low_24h": float(d["lowPrice"]),
+                "volume_24h": float(d["quoteVolume"]),
+            }
+        return tickers
+    except Exception as e:
+        print(f"  [ERR] bulk ticker fetch: {e}")
+        return {}
+
+
+def filter_symbols_by_volume(symbols: List[str], tickers: dict) -> List[str]:
+    """
+    Filter symbols by minimum 24h volume. Returns sorted by volume desc.
+    """
+    valid = []
+    for sym in symbols:
+        t = tickers.get(sym)
+        if t and t["volume_24h"] >= MIN_VOLUME_24H_USDT:
+            valid.append((sym, t["volume_24h"]))
+
+    valid.sort(key=lambda x: x[1], reverse=True)
+    filtered = [s[0] for s in valid]
+
+    if MAX_SYMBOLS_PER_SCAN > 0:
+        filtered = filtered[:MAX_SYMBOLS_PER_SCAN]
+
+    return filtered
+
+
+def get_active_symbols() -> tuple:
+    """
+    Master function: fetch all Binance USDT perps, filter by volume.
+    Returns (filtered_symbols_list, bulk_tickers_dict).
+
+    The bulk tickers are returned so scanner.py can pass preloaded
+    ticker data into scan_symbol() and avoid redundant per-symbol calls.
+    """
+    all_symbols = fetch_all_futures_symbols()
+    if not all_symbols:
+        print("  [WARN] Exchange info unavailable, using fallback list")
+        return _FALLBACK_SYMBOLS, {}
+
+    tickers = fetch_all_tickers_bulk()
+    if not tickers:
+        return all_symbols, {}
+
+    filtered = filter_symbols_by_volume(all_symbols, tickers)
+    return filtered, tickers
+
+
+# Fallback if Binance exchange info endpoint fails
+_FALLBACK_SYMBOLS = [
+    "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
+    "DOGEUSDT", "ADAUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT",
+    "LTCUSDT", "ATOMUSDT", "UNIUSDT", "APTUSDT", "ARBUSDT",
+    "OPUSDT", "NEARUSDT", "FILUSDT", "SUIUSDT", "PEPEUSDT",
+]
+
+
+# ──────────────────────────────────────────────────────────
+#  Klines (candlestick data)
+# ──────────────────────────────────────────────────────────
+def fetch_klines(symbol: str, interval: str, limit: int = KLINE_LIMIT) -> Optional[pd.DataFrame]:
+    """Fetch futures klines from Binance."""
+    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/klines"
+    params = {"symbol": symbol, "interval": interval, "limit": limit}
+    try:
+        r = SESSION.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        if not data:
+            return None
+        df = pd.DataFrame(data, columns=[
+            "open_time", "open", "high", "low", "close", "volume",
+            "close_time", "quote_volume", "trades",
+            "taker_buy_base", "taker_buy_quote", "ignore"
+        ])
+        for col in ["open", "high", "low", "close", "volume", "quote_volume"]:
+            df[col] = df[col].astype(float)
+        df["open_time"] = pd.to_datetime(df["open_time"], unit="ms", utc=True)
+        df["close_time"] = pd.to_datetime(df["close_time"], unit="ms", utc=True)
+        return df
+    except Exception as e:
+        print(f"  [ERR] klines {symbol} {interval}: {e}")
+        return None
+
+
+# ──────────────────────────────────────────────────────────
+#  RSI calculation (Wilder's smoothing)
+# ──────────────────────────────────────────────────────────
+def compute_rsi(closes: pd.Series, period: int = RSI_PERIOD) -> pd.Series:
+    """Compute RSI using exponential (Wilder) smoothing."""
+    delta = closes.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
+    rs = avg_gain / avg_loss.replace(0, np.nan)
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+
+def get_rsi_for_symbol(symbol: str, interval: str) -> Optional[float]:
+    """Return the *latest* RSI value for a symbol on a given timeframe."""
+    df = fetch_klines(symbol, interval)
+    if df is None or len(df) < RSI_PERIOD + 1:
+        return None
+    rsi_series = compute_rsi(df["close"])
+    return round(rsi_series.iloc[-1], 2)
+
+
+# ──────────────────────────────────────────────────────────
+#  Multi-timeframe RSI snapshot
+# ──────────────────────────────────────────────────────────
+def get_multi_tf_rsi(symbol: str) -> dict:
+    """Return dict  { 'rsi_1m': 45.2, 'rsi_5m': 62.1, ... }  for all configured TFs."""
+    result = {}
+    for label, interval in TIMEFRAMES.items():
+        rsi_val = get_rsi_for_symbol(symbol, interval)
+        result[f"rsi_{label}"] = rsi_val
+        time.sleep(REQUEST_DELAY)
+    return result
+
+
+# ──────────────────────────────────────────────────────────
+#  Open Interest
+# ──────────────────────────────────────────────────────────
+def fetch_open_interest(symbol: str) -> Optional[dict]:
+    """Current open interest (contracts + value)."""
+    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/openInterest"
+    try:
+        r = SESSION.get(url, params={"symbol": symbol}, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        return {
+            "oi_contracts": float(data["openInterest"]),
+            "oi_time": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as e:
+        print(f"  [ERR] OI {symbol}: {e}")
+        return None
+
+
+def fetch_oi_history(symbol: str, period: str = "5m", limit: int = 30) -> Optional[pd.DataFrame]:
+    """Open interest statistics (with value in USDT)."""
+    url = f"{BINANCE_FUTURES_BASE}/futures/data/openInterestHist"
+    params = {"symbol": symbol, "period": period, "limit": limit}
+    try:
+        r = SESSION.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        if not data:
+            return None
+        df = pd.DataFrame(data)
+        df["sumOpenInterest"] = df["sumOpenInterest"].astype(float)
+        df["sumOpenInterestValue"] = df["sumOpenInterestValue"].astype(float)
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+        return df
+    except Exception as e:
+        print(f"  [ERR] OI history {symbol}: {e}")
+        return None
+
+
+# ──────────────────────────────────────────────────────────
+#  Price snapshot (single symbol fallback)
+# ──────────────────────────────────────────────────────────
+def fetch_ticker(symbol: str) -> Optional[dict]:
+    """24h ticker with price + volume."""
+    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/ticker/24hr"
+    try:
+        r = SESSION.get(url, params={"symbol": symbol}, timeout=10)
+        r.raise_for_status()
+        d = r.json()
+        return {
+            "price": float(d["lastPrice"]),
+            "price_change_pct_24h": float(d["priceChangePercent"]),
+            "high_24h": float(d["highPrice"]),
+            "low_24h": float(d["lowPrice"]),
+            "volume_24h": float(d["quoteVolume"]),
+        }
+    except Exception as e:
+        print(f"  [ERR] ticker {symbol}: {e}")
+        return None
+
+
+# ──────────────────────────────────────────────────────────
+#  Funding rate
+# ──────────────────────────────────────────────────────────
+def fetch_funding_rate(symbol: str) -> Optional[float]:
+    """Latest funding rate."""
+    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/fundingRate"
+    try:
+        r = SESSION.get(url, params={"symbol": symbol, "limit": 1}, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        if data:
+            return float(data[0]["fundingRate"])
+        return None
+    except Exception as e:
+        print(f"  [ERR] funding {symbol}: {e}")
+        return None
+
+
+# ──────────────────────────────────────────────────────────
+#  Full scan for one symbol
+# ──────────────────────────────────────────────────────────
+def scan_symbol(
+    symbol: str,
+    preloaded_ticker: dict = None,
+    scan_time: Optional[datetime] = None,
+) -> Optional[dict]:
+    """
+    Collect ALL data points for a single symbol.
+    If preloaded_ticker is provided (from bulk fetch), skip individual ticker call.
+    """
+    effective_scan_time = scan_time or datetime.now(timezone.utc)
+    row = {"symbol": symbol, "scan_time": effective_scan_time.isoformat()}
+
+    # Use preloaded ticker data if available (saves API calls)
+    if preloaded_ticker:
+        row.update(preloaded_ticker)
+    else:
+        ticker = fetch_ticker(symbol)
+        if ticker is None:
+            return None
+        row.update(ticker)
+
+    # Multi-TF RSI
+    rsi_data = get_multi_tf_rsi(symbol)
+    row.update(rsi_data)
+
+    # Open Interest
+    oi = fetch_open_interest(symbol)
+    if oi:
+        row["oi_contracts"] = oi["oi_contracts"]
+
+    # OI history for change detection
+    oi_hist = fetch_oi_history(symbol, period="5m", limit=12)
+    if oi_hist is not None and len(oi_hist) >= 2:
+        row["oi_value_now"] = oi_hist["sumOpenInterestValue"].iloc[-1]
+        row["oi_value_1h_ago"] = oi_hist["sumOpenInterestValue"].iloc[0]
+        row["oi_change_pct_1h"] = round(
+            (row["oi_value_now"] - row["oi_value_1h_ago"]) / row["oi_value_1h_ago"] * 100, 3
+        )
+
+    # Funding rate
+    funding = fetch_funding_rate(symbol)
+    if funding is not None:
+        row["funding_rate"] = funding
+
+    return row

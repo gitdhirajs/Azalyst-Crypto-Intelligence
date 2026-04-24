@@ -1,0 +1,122 @@
+name: Hourly Candle Patterns
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hourly-candle-patterns
+  cancel-in-progress: false
+
+jobs:
+  train-hourly-patterns:
+    runs-on: ubuntu-latest
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      HOURLY_SYMBOL_LIMIT: "120"
+      HOURLY_KLINE_LIMIT: "168"
+      HOURLY_FORWARD_CANDLES: "3"
+      HOURLY_CONTINUATION_THRESHOLD_PCT: "1.5"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Prepare runtime branch checkout
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf runtime-data
+          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" runtime-data
+          cd runtime-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin runtime-data >/dev/null 2>&1; then
+            git fetch origin runtime-data:runtime-data
+            git checkout runtime-data
+          else
+            git checkout --orphan runtime-data
+            git rm -rf . >/dev/null 2>&1 || true
+            find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+            mkdir -p data logs models reports
+            printf "# Runtime Data\n\nManaged by GitHub Actions.\n" > README.md
+            git add README.md data logs models reports
+            git commit -m "Initialize runtime data branch"
+            git push origin runtime-data
+          fi
+
+      - name: Restore runtime state
+        run: |
+          mkdir -p data logs models reports
+          for dir in data logs models reports; do
+            if [ -d "runtime-data/$dir" ]; then
+              rsync -a --delete "runtime-data/$dir/" "$dir/"
+            fi
+          done
+
+      - name: Train hourly candle-pattern model
+        run: python jobs.py train-hourly --force
+
+      - name: Refresh markdown summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from src.pipeline import write_summary_markdown
+
+          logs = Path("logs")
+          main_report = None
+          hourly_report = None
+
+          latest_main = logs / "latest_train_report.json"
+          latest_hourly = logs / "latest_hourly_train_report.json"
+          if latest_main.exists():
+              main_report = json.loads(latest_main.read_text(encoding="utf-8"))
+          if latest_hourly.exists():
+              hourly_report = json.loads(latest_hourly.read_text(encoding="utf-8"))
+
+          write_summary_markdown(
+              main_report=main_report,
+              hourly_report=hourly_report,
+              scan_signals=None,
+              summary_path="reports/latest_summary.md",
+          )
+          PY
+
+      - name: Persist runtime state
+        run: |
+          mkdir -p runtime-data/data runtime-data/logs runtime-data/models runtime-data/reports
+          for dir in data logs models reports; do
+            rsync -a --delete "$dir/" "runtime-data/$dir/"
+          done
+
+          cd runtime-data
+          printf "# Runtime Data\n\nManaged by GitHub Actions.\n" > README.md
+          git add README.md data logs models reports
+          if ! git diff --cached --quiet; then
+            git commit -m "Update hourly pattern artifacts"
+            git push origin runtime-data
+          fi
+
+      - name: Upload hourly artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hourly-pattern-artifacts
+          path: |
+            reports/**
+            logs/**
+            models/**
+          retention-days: 7

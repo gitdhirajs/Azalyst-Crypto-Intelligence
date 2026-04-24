@@ -1,0 +1,96 @@
+name: Main Scanner
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-scanner
+  cancel-in-progress: false
+
+jobs:
+  scan-and-train:
+    runs-on: ubuntu-latest
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      LABEL_HORIZON_MINUTES: "60"
+      LABEL_LOOKAHEAD_TOLERANCE_MINUTES: "45"
+      MAX_SYMBOLS_PER_SCAN: "0"
+      MIN_VOLUME_24H_USDT: "5000000"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Prepare runtime branch checkout
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf runtime-data
+          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" runtime-data
+          cd runtime-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin runtime-data >/dev/null 2>&1; then
+            git fetch origin runtime-data:runtime-data
+            git checkout runtime-data
+          else
+            git checkout --orphan runtime-data
+            git rm -rf . >/dev/null 2>&1 || true
+            find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+            mkdir -p data logs models reports
+            printf "# Runtime Data\n\nManaged by GitHub Actions.\n" > README.md
+            git add README.md data logs models reports
+            git commit -m "Initialize runtime data branch"
+            git push origin runtime-data
+          fi
+
+      - name: Restore runtime state
+        run: |
+          mkdir -p data logs models reports
+          for dir in data logs models reports; do
+            if [ -d "runtime-data/$dir" ]; then
+              rsync -a --delete "runtime-data/$dir/" "$dir/"
+            fi
+          done
+
+      - name: Run one-shot scanner and main training
+        run: python jobs.py scheduled --skip-hourly --summary-path reports/latest_summary.md
+
+      - name: Persist runtime state
+        run: |
+          mkdir -p runtime-data/data runtime-data/logs runtime-data/models runtime-data/reports
+          for dir in data logs models reports; do
+            rsync -a --delete "$dir/" "runtime-data/$dir/"
+          done
+
+          cd runtime-data
+          printf "# Runtime Data\n\nManaged by GitHub Actions.\n" > README.md
+          git add README.md data logs models reports
+          if ! git diff --cached --quiet; then
+            git commit -m "Update scanner runtime artifacts"
+            git push origin runtime-data
+          fi
+
+      - name: Upload latest artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-scanner-artifacts
+          path: |
+            reports/**
+            logs/**
+            models/**
+          retention-days: 7
