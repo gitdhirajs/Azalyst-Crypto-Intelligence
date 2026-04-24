@@ -1,5 +1,5 @@
 """
-Data Collector v2.0 — Dynamically discovers ALL Binance USDT perpetual futures,
+Data Collector v2.0 — Dynamically discovers ALL Bybit USDT perpetual futures,
 filters by volume/OI, then pulls klines, RSI, and Open Interest.
 All public endpoints, no API key needed.
 """
@@ -13,7 +13,7 @@ import pandas as pd
 import requests
 from datetime import datetime, timezone
 from src.config import (
-    BINANCE_FUTURES_BASE, TIMEFRAMES, KLINE_LIMIT, RSI_PERIOD,
+    BYBIT_V5_BASE, TIMEFRAMES, KLINE_LIMIT, RSI_PERIOD,
     MIN_VOLUME_24H_USDT, MIN_OI_USDT, EXCLUDED_SYMBOLS,
     MAX_SYMBOLS_PER_SCAN, REQUEST_DELAY, BATCH_DELAY
 )
@@ -66,23 +66,24 @@ def get_request_error_summary(max_examples: int = 8) -> dict:
 
 
 # ──────────────────────────────────────────────────────────
-#  Dynamic symbol discovery — ALL Binance USDT perps
+#  Dynamic symbol discovery — ALL Bybit USDT perps
 # ──────────────────────────────────────────────────────────
 def fetch_all_futures_symbols() -> List[str]:
     """
-    Fetch ALL active USDT-margined perpetual futures pairs from Binance.
+    Fetch ALL active USDT-margined perpetual futures pairs from Bybit.
     Returns a sorted list like ['1000BONKUSDT', 'AAVEUSDT', 'BTCUSDT', ...].
     """
-    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/exchangeInfo"
+    url = f"{BYBIT_V5_BASE}/market/instruments-info"
+    params = {"category": "linear", "limit": 1000}
     try:
-        r = SESSION.get(url, timeout=15)
+        r = SESSION.get(url, params=params, timeout=15)
         r.raise_for_status()
         data = r.json()
         symbols = []
-        for s in data.get("symbols", []):
-            if (s.get("status") == "TRADING"
-                    and s.get("contractType") == "PERPETUAL"
-                    and s.get("quoteAsset") == "USDT"
+        for s in data.get("result", {}).get("list", []):
+            if (s.get("status") == "Trading"
+                    and s.get("contractType") == "LinearPerpetual"
+                    and s.get("quoteCoin") == "USDT"
                     and s["symbol"] not in EXCLUDED_SYMBOLS):
                 symbols.append(s["symbol"])
         return sorted(symbols)
@@ -97,19 +98,20 @@ def fetch_all_tickers_bulk() -> dict:
     Fetch 24h ticker data for ALL futures pairs in ONE API call.
     Returns dict: { 'BTCUSDT': {price, volume_24h, ...}, ... }
     """
-    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/ticker/24hr"
+    url = f"{BYBIT_V5_BASE}/market/tickers"
+    params = {"category": "linear"}
     try:
-        r = SESSION.get(url, timeout=15)
+        r = SESSION.get(url, params=params, timeout=15)
         r.raise_for_status()
         data = r.json()
         tickers = {}
-        for d in data:
+        for d in data.get("result", {}).get("list", []):
             tickers[d["symbol"]] = {
                 "price": float(d["lastPrice"]),
-                "price_change_pct_24h": float(d["priceChangePercent"]),
-                "high_24h": float(d["highPrice"]),
-                "low_24h": float(d["lowPrice"]),
-                "volume_24h": float(d["quoteVolume"]),
+                "price_change_pct_24h": float(d["price24hPcnt"]),
+                "high_24h": float(d["highPrice24h"]),
+                "low_24h": float(d["lowPrice24h"]),
+                "volume_24h": float(d["turnover24h"]),
             }
         return tickers
     except Exception as e:
@@ -139,7 +141,7 @@ def filter_symbols_by_volume(symbols: List[str], tickers: dict) -> List[str]:
 
 def get_active_symbols() -> tuple:
     """
-    Master function: fetch all Binance USDT perps, filter by volume.
+    Master function: fetch all Bybit USDT perps, filter by volume.
     Returns (filtered_symbols_list, bulk_tickers_dict).
 
     The bulk tickers are returned so scanner.py can pass preloaded
@@ -158,12 +160,12 @@ def get_active_symbols() -> tuple:
     return filtered, tickers
 
 
-# Fallback if Binance exchange info endpoint fails
+# Fallback if Bybit exchange info endpoint fails
 _FALLBACK_SYMBOLS = [
-    "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
-    "DOGEUSDT", "ADAUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT",
-    "LTCUSDT", "ATOMUSDT", "UNIUSDT", "APTUSDT", "ARBUSDT",
-    "OPUSDT", "NEARUSDT", "FILUSDT", "SUIUSDT", "PEPEUSDT",
+    "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT",
+    "ADAUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT", "LTCUSDT",
+    "ATOMUSDT", "UNIUSDT", "APTUSDT", "ARBUSDT", "OPUSDT",
+    "NEARUSDT", "FILUSDT", "SUIUSDT", "PEPEUSDT", "TRXUSDT",
 ]
 
 
@@ -171,24 +173,34 @@ _FALLBACK_SYMBOLS = [
 #  Klines (candlestick data)
 # ──────────────────────────────────────────────────────────
 def fetch_klines(symbol: str, interval: str, limit: int = KLINE_LIMIT) -> Optional[pd.DataFrame]:
-    """Fetch futures klines from Binance."""
-    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/klines"
-    params = {"symbol": symbol, "interval": interval, "limit": limit}
+    """Fetch futures klines from Bybit."""
+    # Map common intervals to Bybit format
+    interval_map = {
+        "1m": "1", "3m": "3", "5m": "5", "15m": "15", "30m": "30",
+        "1h": "60", "2h": "120", "4h": "240", "6h": "360", "12h": "720",
+        "1d": "D", "1w": "W", "1M": "M"
+    }
+    bybit_interval = interval_map.get(interval, interval)
+    
+    url = f"{BYBIT_V5_BASE}/market/kline"
+    params = {"category": "linear", "symbol": symbol, "interval": bybit_interval, "limit": limit}
     try:
         r = SESSION.get(url, params=params, timeout=10)
         r.raise_for_status()
         data = r.json()
-        if not data:
+        result = data.get("result", {})
+        klines_data = result.get("list", [])
+        if not klines_data:
             return None
-        df = pd.DataFrame(data, columns=[
+        df = pd.DataFrame(klines_data, columns=[
             "open_time", "open", "high", "low", "close", "volume",
-            "close_time", "quote_volume", "trades",
-            "taker_buy_base", "taker_buy_quote", "ignore"
+            "turnover", "trades"
         ])
-        for col in ["open", "high", "low", "close", "volume", "quote_volume"]:
+        for col in ["open", "high", "low", "close", "volume", "turnover"]:
             df[col] = df[col].astype(float)
         df["open_time"] = pd.to_datetime(df["open_time"], unit="ms", utc=True)
-        df["close_time"] = pd.to_datetime(df["close_time"], unit="ms", utc=True)
+        df.rename(columns={"turnover": "quote_volume"}, inplace=True)
+        df["close_time"] = df["open_time"]
         return df
     except Exception as e:
         _record_request_error("klines", e, symbol=symbol, interval=interval)
@@ -238,13 +250,19 @@ def get_multi_tf_rsi(symbol: str) -> dict:
 # ──────────────────────────────────────────────────────────
 def fetch_open_interest(symbol: str) -> Optional[dict]:
     """Current open interest (contracts + value)."""
-    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/openInterest"
+    url = f"{BYBIT_V5_BASE}/market/open-interest"
+    params = {"category": "linear", "symbol": symbol}
     try:
-        r = SESSION.get(url, params={"symbol": symbol}, timeout=10)
+        r = SESSION.get(url, params=params, timeout=10)
         r.raise_for_status()
         data = r.json()
+        result = data.get("result", {})
+        list_data = result.get("list", [])
+        if not list_data:
+            return None
+        oi_data = list_data[0]
         return {
-            "oi_contracts": float(data["openInterest"]),
+            "oi_contracts": float(oi_data["openInterest"]),
             "oi_time": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as e:
@@ -255,18 +273,29 @@ def fetch_open_interest(symbol: str) -> Optional[dict]:
 
 def fetch_oi_history(symbol: str, period: str = "5m", limit: int = 30) -> Optional[pd.DataFrame]:
     """Open interest statistics (with value in USDT)."""
-    url = f"{BINANCE_FUTURES_BASE}/futures/data/openInterestHist"
-    params = {"symbol": symbol, "period": period, "limit": limit}
+    # Map period to Bybit interval format
+    period_map = {
+        "1m": "1", "5m": "5", "15m": "15", "30m": "30",
+        "1h": "60", "4h": "240", "1d": "D"
+    }
+    bybit_period = period_map.get(period, period)
+    
+    url = f"{BYBIT_V5_BASE}/market/open-interest"
+    params = {"category": "linear", "symbol": symbol, "intervalTime": bybit_period, "limit": limit}
     try:
         r = SESSION.get(url, params=params, timeout=10)
         r.raise_for_status()
         data = r.json()
-        if not data:
+        result = data.get("result", {})
+        list_data = result.get("list", [])
+        if not list_data:
             return None
-        df = pd.DataFrame(data)
-        df["sumOpenInterest"] = df["sumOpenInterest"].astype(float)
-        df["sumOpenInterestValue"] = df["sumOpenInterestValue"].astype(float)
+        df = pd.DataFrame(list_data)
+        df["openInterest"] = df["openInterest"].astype(float)
         df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+        # Create sumOpenInterestValue as openInterest * price approximation
+        df["sumOpenInterestValue"] = df["openInterest"]
+        df.rename(columns={"openInterest": "sumOpenInterest"}, inplace=True)
         return df
     except Exception as e:
         _record_request_error("open_interest_history", e, symbol=symbol, period=period)
@@ -279,17 +308,23 @@ def fetch_oi_history(symbol: str, period: str = "5m", limit: int = 30) -> Option
 # ──────────────────────────────────────────────────────────
 def fetch_ticker(symbol: str) -> Optional[dict]:
     """24h ticker with price + volume."""
-    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/ticker/24hr"
+    url = f"{BYBIT_V5_BASE}/market/tickers"
+    params = {"category": "linear", "symbol": symbol}
     try:
-        r = SESSION.get(url, params={"symbol": symbol}, timeout=10)
+        r = SESSION.get(url, params=params, timeout=10)
         r.raise_for_status()
-        d = r.json()
+        data = r.json()
+        result = data.get("result", {})
+        list_data = result.get("list", [])
+        if not list_data:
+            return None
+        d = list_data[0]
         return {
             "price": float(d["lastPrice"]),
-            "price_change_pct_24h": float(d["priceChangePercent"]),
-            "high_24h": float(d["highPrice"]),
-            "low_24h": float(d["lowPrice"]),
-            "volume_24h": float(d["quoteVolume"]),
+            "price_change_pct_24h": float(d["price24hPcnt"]),
+            "high_24h": float(d["highPrice24h"]),
+            "low_24h": float(d["lowPrice24h"]),
+            "volume_24h": float(d["turnover24h"]),
         }
     except Exception as e:
         _record_request_error("ticker", e, symbol=symbol)
@@ -302,13 +337,21 @@ def fetch_ticker(symbol: str) -> Optional[dict]:
 # ──────────────────────────────────────────────────────────
 def fetch_funding_rate(symbol: str) -> Optional[float]:
     """Latest funding rate."""
-    url = f"{BINANCE_FUTURES_BASE}/fapi/v1/fundingRate"
+    url = f"{BYBIT_V5_BASE}/market/tickers"
+    params = {"category": "linear", "symbol": symbol}
     try:
-        r = SESSION.get(url, params={"symbol": symbol, "limit": 1}, timeout=10)
+        r = SESSION.get(url, params=params, timeout=10)
         r.raise_for_status()
         data = r.json()
-        if data:
-            return float(data[0]["fundingRate"])
+        result = data.get("result", {})
+        list_data = result.get("list", [])
+        if not list_data:
+            return None
+        d = list_data[0]
+        # Bybit provides fundingRate in ticker endpoint for linear perps
+        funding_rate = d.get("fundingRate")
+        if funding_rate is not None:
+            return float(funding_rate)
         return None
     except Exception as e:
         _record_request_error("funding_rate", e, symbol=symbol)

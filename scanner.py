@@ -4,7 +4,7 @@
 ║  CRYPTO MARKET SCANNER v2.0                                  ║
 ║  Full-Market RSI × OI × Price Action ML Trainer              ║
 ║                                                              ║
-║  Dynamically scans ALL Binance USDT perpetual futures,       ║
+║  Dynamically scans ALL Bybit USDT perpetual futures,       ║
 ║  not just 30 — giving the ML model proper training data      ║
 ║  across the entire market.                                   ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -56,7 +56,7 @@ def run_scan() -> pd.DataFrame:
     console.print(f"\n[bold cyan]━━━ SCAN #{SCAN_COUNT}  @  {now.strftime('%Y-%m-%d %H:%M:%S UTC')} ━━━[/]")
 
     # Step 1: Discover all active symbols
-    console.print("  [dim]Fetching all Binance USDT perpetual futures...[/]")
+    console.print("  [dim]Fetching all Bybit USDT perpetual futures...[/]")
     symbols, bulk_tickers = get_active_symbols()
 
     if not symbols:
@@ -273,14 +273,14 @@ def maybe_train_model():
 
 def main():
     # Discover symbols count for startup display
-    console.print("[dim]Checking Binance for available pairs...[/]")
+    console.print("[dim]Checking Bybit for available pairs...[/]")
     startup_symbols, _ = get_active_symbols()
     n_syms = len(startup_symbols)
 
     console.print(Panel(
         f"[bold white]CRYPTO MARKET SCANNER v2.0[/]\n"
         f"[dim]Full-Market RSI × OI × Price Action ML[/]\n\n"
-        f"Mode: [bold green]DYNAMIC[/] — scans ALL Binance USDT perps\n"
+        f"Mode: [bold green]DYNAMIC[/] — scans ALL Bybit USDT perps\n"
         f"Active pairs found: [bold cyan]{n_syms}[/]\n"
         f"Volume filter: >${MIN_VOLUME_24H_USDT/1e6:.0f}M daily\n"
         f"Scan interval: {SCAN_INTERVAL_SECONDS}s ({SCAN_INTERVAL_SECONDS//60}min)\n"
