@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-04-24T10:55:10.310167+00:00",
-  "status": "blocked",
-  "headline": "Binance Futures rejected requests from the runner (HTTP 451).",
+  "timestamp": "2026-04-24T14:02:42.207450+00:00",
+  "status": "degraded",
+  "headline": "All symbol scans failed before producing usable rows.",
   "symbols_attempted": 20,
   "symbols_scanned": 0,
   "symbols_failed": 20,
@@ -9,7 +9,7 @@
   "request_errors": {
     "count": 21,
     "status_counts": {
-      "451": 21
+      "403": 21
     },
     "endpoint_counts": {
       "exchange_info": 1,
@@ -18,50 +18,50 @@
     "examples": [
       {
         "endpoint": "exchange_info",
-        "status_code": 451,
-        "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/exchangeInfo"
+        "status_code": 403,
+        "message": "403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/instruments-info?category=linear&limit=1000"
       },
       {
         "endpoint": "ticker",
-        "status_code": 451,
-        "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=BTCUSDT",
+        "status_code": 403,
+        "message": "403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/tickers?category=linear&symbol=BTCUSDT",
         "symbol": "BTCUSDT"
       },
       {
         "endpoint": "ticker",
-        "status_code": 451,
-        "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=ETHUSDT",
+        "status_code": 403,
+        "message": "403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/tickers?category=linear&symbol=ETHUSDT",
         "symbol": "ETHUSDT"
       },
       {
         "endpoint": "ticker",
-        "status_code": 451,
-        "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=BNBUSDT",
-        "symbol": "BNBUSDT"
-      },
-      {
-        "endpoint": "ticker",
-        "status_code": 451,
-        "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=SOLUSDT",
+        "status_code": 403,
+        "message": "403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/tickers?category=linear&symbol=SOLUSDT",
         "symbol": "SOLUSDT"
       },
       {
         "endpoint": "ticker",
-        "status_code": 451,
-        "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=XRPUSDT",
+        "status_code": 403,
+        "message": "403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/tickers?category=linear&symbol=XRPUSDT",
         "symbol": "XRPUSDT"
       },
       {
         "endpoint": "ticker",
-        "status_code": 451,
-        "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=DOGEUSDT",
+        "status_code": 403,
+        "message": "403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/tickers?category=linear&symbol=DOGEUSDT",
         "symbol": "DOGEUSDT"
       },
       {
         "endpoint": "ticker",
-        "status_code": 451,
-        "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=ADAUSDT",
+        "status_code": 403,
+        "message": "403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/tickers?category=linear&symbol=ADAUSDT",
         "symbol": "ADAUSDT"
+      },
+      {
+        "endpoint": "ticker",
+        "status_code": 403,
+        "message": "403 Client Error: Forbidden for url: https://api.bybit.com/v5/market/tickers?category=linear&symbol=AVAXUSDT",
+        "symbol": "AVAXUSDT"
       }
     ]
   }
