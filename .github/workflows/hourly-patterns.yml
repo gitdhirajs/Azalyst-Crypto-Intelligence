@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: hourly-candle-patterns
+  group: runtime-data-pipeline
   cancel-in-progress: false
 
 jobs:
