@@ -75,7 +75,7 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          from src.pipeline import write_summary_markdown
+          from src.pipeline import write_runtime_payload, write_summary_markdown
 
           logs = Path("logs")
           main_report = None
@@ -93,6 +93,11 @@ jobs:
               hourly_report=hourly_report,
               scan_signals=None,
               summary_path="reports/latest_summary.md",
+          )
+          write_runtime_payload(
+              main_report=main_report,
+              hourly_report=hourly_report,
+              scan_signals=None,
           )
           PY
 

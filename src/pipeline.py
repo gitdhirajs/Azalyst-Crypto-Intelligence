@@ -16,8 +16,20 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
-from src.collector import get_active_symbols, scan_symbol
-from src.config import BATCH_DELAY, BATCH_SIZE, MIN_VOLUME_24H_USDT, RAW_DIR, REPORTS_DIR
+from src.collector import (
+    get_active_symbols,
+    get_request_error_summary,
+    reset_request_errors,
+    scan_symbol,
+)
+from src.config import (
+    BATCH_DELAY,
+    BATCH_SIZE,
+    LOGS_DIR,
+    MIN_VOLUME_24H_USDT,
+    RAW_DIR,
+    REPORTS_DIR,
+)
 from src.features import run_feature_pipeline
 from src.hourly_trainer import train_hourly_model
 from src.trainer import predict_current, train_model
@@ -26,10 +38,8 @@ from src.trainer import predict_current, train_model
 def scan_market_once(show_progress: bool = True) -> pd.DataFrame:
     """Run a single full-market scan and persist the raw rows."""
     now = datetime.now(timezone.utc)
+    reset_request_errors()
     symbols, bulk_tickers = get_active_symbols()
-    if not symbols:
-        return pd.DataFrame()
-
     rows = []
     failed = 0
 
@@ -42,7 +52,7 @@ def scan_market_once(show_progress: bool = True) -> pd.DataFrame:
         else:
             failed += 1
 
-    if show_progress:
+    if show_progress and symbols:
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -61,31 +71,46 @@ def scan_market_once(show_progress: bool = True) -> pd.DataFrame:
                         f"[dim]Rate-limit pause after batch ending at {batch[-1]}[/]"
                     )
                     time.sleep(BATCH_DELAY)
-    else:
+    elif symbols:
         for batch_start in range(0, len(symbols), BATCH_SIZE):
             batch = symbols[batch_start : batch_start + BATCH_SIZE]
             for symbol in batch:
                 _process_symbol(symbol)
             if batch_start + BATCH_SIZE < len(symbols):
                 time.sleep(BATCH_DELAY)
-
-    if not rows:
-        return pd.DataFrame()
+    else:
+        symbols = []
 
     df = pd.DataFrame(rows)
-    date_str = now.strftime("%Y%m%d")
-    raw_path = RAW_DIR / f"scans_{date_str}.csv"
-    if raw_path.exists():
-        df.to_csv(raw_path, mode="a", header=False, index=False)
-    else:
-        df.to_csv(raw_path, index=False)
+    if not df.empty:
+        date_str = now.strftime("%Y%m%d")
+        raw_path = RAW_DIR / f"scans_{date_str}.csv"
+        if raw_path.exists():
+            df.to_csv(raw_path, mode="a", header=False, index=False)
+        else:
+            df.to_csv(raw_path, index=False)
 
+    request_errors = get_request_error_summary()
     summary = {
         "timestamp": now.isoformat(),
+        "status": "healthy" if not df.empty else "no_data",
+        "headline": "Market scan completed successfully." if not df.empty else "No scan rows were collected.",
+        "symbols_attempted": int(len(symbols)),
         "symbols_scanned": int(len(rows)),
         "symbols_failed": int(failed),
         "min_volume_24h_usdt": MIN_VOLUME_24H_USDT,
+        "request_errors": request_errors,
     }
+    if not symbols:
+        summary["status"] = "no_symbols"
+        summary["headline"] = "No active symbols were available for scanning."
+    elif df.empty and request_errors.get("status_counts", {}).get("451"):
+        summary["status"] = "blocked"
+        summary["headline"] = "Binance Futures rejected requests from the runner (HTTP 451)."
+    elif df.empty and failed:
+        summary["status"] = "degraded"
+        summary["headline"] = "All symbol scans failed before producing usable rows."
+
     with open(REPORTS_DIR / "latest_scan_summary.json", "w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2)
 
@@ -123,6 +148,104 @@ def run_main_training(force: bool = False) -> dict:
     if featured.empty:
         return {"status": "no_data"}
     return train_model(force=force)
+
+
+def _read_json(path) -> dict | list | None:
+    if not path.exists():
+        return None
+    with open(path, "r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _read_text(path) -> str | None:
+    if not path.exists():
+        return None
+    return path.read_text(encoding="utf-8")
+
+
+def write_runtime_payload(
+    main_report: dict | None = None,
+    hourly_report: dict | None = None,
+    scan_signals: pd.DataFrame | None = None,
+) -> dict:
+    """Persist machine-readable runtime health for the web dashboard."""
+    scan_summary = _read_json(REPORTS_DIR / "latest_scan_summary.json") or {}
+    latest_main = main_report or _read_json(LOGS_DIR / "latest_train_report.json")
+    latest_hourly = hourly_report or _read_json(LOGS_DIR / "latest_hourly_train_report.json")
+
+    latest_scan_signals = (
+        scan_signals.to_dict(orient="records")
+        if scan_signals is not None and not scan_signals.empty
+        else (_read_json(REPORTS_DIR / "latest_scan_signals.json") or [])
+    )
+    latest_hourly_signals = _read_json(REPORTS_DIR / "hourly_live_signals.json") or []
+
+    error_counts = (
+        (scan_summary.get("request_errors") or {}).get("status_counts")
+        if isinstance(scan_summary, dict)
+        else {}
+    ) or {}
+    scanner_status = scan_summary.get("status", "unknown") if isinstance(scan_summary, dict) else "unknown"
+    notes = []
+
+    if scanner_status == "blocked" or error_counts.get("451"):
+        notes.append(
+            "GitHub-hosted runners are currently blocked by Binance Futures (HTTP 451), so automated scans are not collecting live market rows."
+        )
+    elif scanner_status == "degraded":
+        notes.append("The scanner ran but did not produce usable rows for the latest cycle.")
+    elif scanner_status == "healthy":
+        notes.append("The scanner completed and produced live market rows for the latest cycle.")
+
+    if latest_main and latest_main.get("status") == "trained":
+        notes.append("Main scanner model metrics below come from the most recent successful training snapshot.")
+    if latest_hourly and latest_hourly.get("status") == "trained":
+        notes.append("Hourly candle-pattern model metrics below come from the most recent successful training snapshot.")
+
+    runtime_status = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "dashboard_name": "Azalyst Coinglass Scanner",
+        "source_mode": "github_actions" if os.getenv("GITHUB_ACTIONS") == "true" else "local",
+        "scanner": scan_summary,
+        "main_model": {
+            "status": latest_main.get("status") if latest_main else "missing",
+            "timestamp": latest_main.get("timestamp") if latest_main else None,
+            "accuracy": latest_main.get("accuracy") if latest_main else None,
+            "roc_auc": latest_main.get("roc_auc") if latest_main else None,
+            "samples": latest_main.get("n_samples") if latest_main else None,
+        },
+        "hourly_model": {
+            "status": latest_hourly.get("status") if latest_hourly else "missing",
+            "timestamp": latest_hourly.get("timestamp") if latest_hourly else None,
+            "accuracy": latest_hourly.get("accuracy") if latest_hourly else None,
+            "roc_auc": latest_hourly.get("roc_auc") if latest_hourly else None,
+            "samples": latest_hourly.get("n_samples") if latest_hourly else None,
+        },
+        "workflow_schedules": {
+            "main_scanner": "*/15 * * * *",
+            "hourly_patterns": "7 * * * *",
+        },
+        "notes": notes,
+    }
+
+    dashboard_payload = {
+        "generated_at": runtime_status["generated_at"],
+        "dashboard_name": runtime_status["dashboard_name"],
+        "runtime_status": runtime_status,
+        "main_report": latest_main,
+        "hourly_report": latest_hourly,
+        "latest_scan_signals": latest_scan_signals,
+        "hourly_live_signals": latest_hourly_signals,
+        "summary_markdown": _read_text(REPORTS_DIR / "latest_summary.md"),
+    }
+
+    with open(REPORTS_DIR / "latest_runtime_status.json", "w", encoding="utf-8") as handle:
+        json.dump(runtime_status, handle, indent=2, default=str)
+
+    with open(REPORTS_DIR / "latest_dashboard_payload.json", "w", encoding="utf-8") as handle:
+        json.dump(dashboard_payload, handle, indent=2, default=str)
+
+    return dashboard_payload
 
 
 def write_summary_markdown(
@@ -226,10 +349,16 @@ def run_scheduled_pipeline(
         scan_signals=top_scan_signals,
         summary_path=summary_path,
     )
+    dashboard_payload = write_runtime_payload(
+        main_report=main_report,
+        hourly_report=hourly_report,
+        scan_signals=top_scan_signals,
+    )
 
     return {
         "scan_rows": int(len(scan_df)),
         "main_report": main_report,
         "hourly_report": hourly_report,
+        "runtime_status": dashboard_payload.get("runtime_status"),
         "summary_markdown": markdown,
     }

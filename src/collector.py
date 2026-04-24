@@ -3,12 +3,15 @@ Data Collector v2.0 — Dynamically discovers ALL Binance USDT perpetual futures
 filters by volume/OI, then pulls klines, RSI, and Open Interest.
 All public endpoints, no API key needed.
 """
+import re
 import time
-import requests
-import pandas as pd
+from collections import Counter
+from typing import List, Optional
+
 import numpy as np
+import pandas as pd
+import requests
 from datetime import datetime, timezone
-from typing import Optional, List
 from src.config import (
     BINANCE_FUTURES_BASE, TIMEFRAMES, KLINE_LIMIT, RSI_PERIOD,
     MIN_VOLUME_24H_USDT, MIN_OI_USDT, EXCLUDED_SYMBOLS,
@@ -17,6 +20,49 @@ from src.config import (
 
 SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": "CryptoScanner/2.0"})
+REQUEST_ERRORS: list[dict] = []
+
+
+def _extract_status_code(error: Exception) -> int | None:
+    response = getattr(error, "response", None)
+    status_code = getattr(response, "status_code", None)
+    if status_code is not None:
+        return int(status_code)
+
+    match = re.search(r"\b(\d{3})\b", str(error))
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def _record_request_error(endpoint: str, error: Exception, **details) -> None:
+    entry = {
+        "endpoint": endpoint,
+        "status_code": _extract_status_code(error),
+        "message": str(error),
+    }
+    entry.update({key: value for key, value in details.items() if value is not None})
+    REQUEST_ERRORS.append(entry)
+
+
+def reset_request_errors() -> None:
+    REQUEST_ERRORS.clear()
+
+
+def get_request_error_summary(max_examples: int = 8) -> dict:
+    status_counts = Counter(
+        str(item["status_code"])
+        for item in REQUEST_ERRORS
+        if item.get("status_code") is not None
+    )
+    endpoint_counts = Counter(item["endpoint"] for item in REQUEST_ERRORS)
+
+    return {
+        "count": len(REQUEST_ERRORS),
+        "status_counts": dict(status_counts),
+        "endpoint_counts": dict(endpoint_counts),
+        "examples": REQUEST_ERRORS[:max_examples],
+    }
 
 
 # ──────────────────────────────────────────────────────────
@@ -41,6 +87,7 @@ def fetch_all_futures_symbols() -> List[str]:
                 symbols.append(s["symbol"])
         return sorted(symbols)
     except Exception as e:
+        _record_request_error("exchange_info", e)
         print(f"  [ERR] Failed to fetch exchange info: {e}")
         return []
 
@@ -66,6 +113,7 @@ def fetch_all_tickers_bulk() -> dict:
             }
         return tickers
     except Exception as e:
+        _record_request_error("bulk_ticker", e)
         print(f"  [ERR] bulk ticker fetch: {e}")
         return {}
 
@@ -143,6 +191,7 @@ def fetch_klines(symbol: str, interval: str, limit: int = KLINE_LIMIT) -> Option
         df["close_time"] = pd.to_datetime(df["close_time"], unit="ms", utc=True)
         return df
     except Exception as e:
+        _record_request_error("klines", e, symbol=symbol, interval=interval)
         print(f"  [ERR] klines {symbol} {interval}: {e}")
         return None
 
@@ -199,6 +248,7 @@ def fetch_open_interest(symbol: str) -> Optional[dict]:
             "oi_time": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as e:
+        _record_request_error("open_interest", e, symbol=symbol)
         print(f"  [ERR] OI {symbol}: {e}")
         return None
 
@@ -219,6 +269,7 @@ def fetch_oi_history(symbol: str, period: str = "5m", limit: int = 30) -> Option
         df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
         return df
     except Exception as e:
+        _record_request_error("open_interest_history", e, symbol=symbol, period=period)
         print(f"  [ERR] OI history {symbol}: {e}")
         return None
 
@@ -241,6 +292,7 @@ def fetch_ticker(symbol: str) -> Optional[dict]:
             "volume_24h": float(d["quoteVolume"]),
         }
     except Exception as e:
+        _record_request_error("ticker", e, symbol=symbol)
         print(f"  [ERR] ticker {symbol}: {e}")
         return None
 
@@ -259,6 +311,7 @@ def fetch_funding_rate(symbol: str) -> Optional[float]:
             return float(data[0]["fundingRate"])
         return None
     except Exception as e:
+        _record_request_error("funding_rate", e, symbol=symbol)
         print(f"  [ERR] funding {symbol}: {e}")
         return None
 

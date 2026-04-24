@@ -87,6 +87,19 @@ Generated runtime data is not kept on the code branch. Instead, workflows restor
 
 through a separate `runtime-data` branch.
 
+## Dashboard
+
+The web dashboard is published from `docs/` as:
+
+- `https://gitdhirajs.github.io/coinglass-scanner/`
+
+It surfaces:
+
+- latest workflow status from GitHub Actions
+- runtime health from the `runtime-data` branch
+- local bootstrap model snapshots for the main and hourly ML models
+- known operational issues such as Binance blocking GitHub-hosted runners
+
 ## Local Usage
 
 Install dependencies:
