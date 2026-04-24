@@ -11,6 +11,8 @@ data/
 logs/
 models/
 reports/
+!docs/data/
+!docs/data/bootstrap.json
 
 .env
 .DS_Store
