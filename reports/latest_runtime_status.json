@@ -1,0 +1,94 @@
+{
+  "generated_at": "2026-04-24T07:13:23.695737+00:00",
+  "dashboard_name": "Azalyst Coinglass Scanner",
+  "source_mode": "github_actions",
+  "scanner": {
+    "timestamp": "2026-04-24T07:13:18.751379+00:00",
+    "status": "blocked",
+    "headline": "Binance Futures rejected requests from the runner (HTTP 451).",
+    "symbols_attempted": 20,
+    "symbols_scanned": 0,
+    "symbols_failed": 20,
+    "min_volume_24h_usdt": 5000000.0,
+    "request_errors": {
+      "count": 21,
+      "status_counts": {
+        "451": 21
+      },
+      "endpoint_counts": {
+        "exchange_info": 1,
+        "ticker": 20
+      },
+      "examples": [
+        {
+          "endpoint": "exchange_info",
+          "status_code": 451,
+          "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/exchangeInfo"
+        },
+        {
+          "endpoint": "ticker",
+          "status_code": 451,
+          "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=BTCUSDT",
+          "symbol": "BTCUSDT"
+        },
+        {
+          "endpoint": "ticker",
+          "status_code": 451,
+          "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=ETHUSDT",
+          "symbol": "ETHUSDT"
+        },
+        {
+          "endpoint": "ticker",
+          "status_code": 451,
+          "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=BNBUSDT",
+          "symbol": "BNBUSDT"
+        },
+        {
+          "endpoint": "ticker",
+          "status_code": 451,
+          "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=SOLUSDT",
+          "symbol": "SOLUSDT"
+        },
+        {
+          "endpoint": "ticker",
+          "status_code": 451,
+          "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=XRPUSDT",
+          "symbol": "XRPUSDT"
+        },
+        {
+          "endpoint": "ticker",
+          "status_code": 451,
+          "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=DOGEUSDT",
+          "symbol": "DOGEUSDT"
+        },
+        {
+          "endpoint": "ticker",
+          "status_code": 451,
+          "message": "451 Client Error:  for url: https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=ADAUSDT",
+          "symbol": "ADAUSDT"
+        }
+      ]
+    }
+  },
+  "main_model": {
+    "status": "missing",
+    "timestamp": null,
+    "accuracy": null,
+    "roc_auc": null,
+    "samples": null
+  },
+  "hourly_model": {
+    "status": "missing",
+    "timestamp": null,
+    "accuracy": null,
+    "roc_auc": null,
+    "samples": null
+  },
+  "workflow_schedules": {
+    "main_scanner": "*/15 * * * *",
+    "hourly_patterns": "7 * * * *"
+  },
+  "notes": [
+    "GitHub-hosted runners are currently blocked by Binance Futures (HTTP 451), so automated scans are not collecting live market rows."
+  ]
+}
