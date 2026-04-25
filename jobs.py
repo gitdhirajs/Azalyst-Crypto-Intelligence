@@ -7,7 +7,13 @@ import argparse
 import json
 
 from src.hourly_trainer import train_hourly_model
-from src.pipeline import run_main_training, run_scheduled_pipeline, scan_market_once, save_live_signals
+from src.pipeline import (
+    reset_runtime_artifacts,
+    run_main_training,
+    run_scheduled_pipeline,
+    scan_market_once,
+    save_live_signals,
+)
 from src.trainer import predict_current
 
 
@@ -26,6 +32,12 @@ def main() -> None:
     hourly_parser.add_argument("--force", action="store_true")
     hourly_parser.add_argument("--symbol-limit", type=int, default=None)
     hourly_parser.add_argument("--kline-limit", type=int, default=None)
+
+    reset_parser = subparsers.add_parser(
+        "reset-runtime",
+        help="Clear generated data, logs, models, and reports for a fresh start.",
+    )
+    reset_parser.add_argument("--yes", action="store_true", help="Confirm deletion.")
 
     scheduled_parser = subparsers.add_parser(
         "scheduled",
@@ -64,6 +76,12 @@ def main() -> None:
                 default=str,
             )
         )
+        return
+
+    if args.command == "reset-runtime":
+        if not args.yes:
+            raise SystemExit("Refusing to reset runtime artifacts without --yes")
+        print(json.dumps(reset_runtime_artifacts(), indent=2))
         return
 
     result = run_scheduled_pipeline(

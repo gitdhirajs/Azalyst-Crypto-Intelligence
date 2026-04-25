@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import time
 from datetime import datetime, timezone
 
@@ -25,14 +26,45 @@ from src.collector import (
 from src.config import (
     BATCH_DELAY,
     BATCH_SIZE,
+    DATA_DIR,
+    FEATURES_DIR,
+    HOURLY_DIR,
+    LABELS_DIR,
     LOGS_DIR,
     MIN_VOLUME_24H_USDT,
+    MODELS_DIR,
     RAW_DIR,
     REPORTS_DIR,
 )
 from src.features import run_feature_pipeline
 from src.hourly_trainer import train_hourly_model
 from src.trainer import predict_current, train_model
+
+
+def _has_access_block(error_counts: dict) -> bool:
+    return bool(error_counts.get("403") or error_counts.get("451"))
+
+
+def reset_runtime_artifacts() -> dict:
+    """Delete generated runtime artifacts and recreate empty runtime directories."""
+    removed = []
+    for path in [DATA_DIR, LOGS_DIR, MODELS_DIR, REPORTS_DIR]:
+        if path.exists():
+            shutil.rmtree(path)
+            removed.append(str(path))
+
+    for path in [
+        RAW_DIR,
+        FEATURES_DIR,
+        HOURLY_DIR,
+        LABELS_DIR,
+        LOGS_DIR,
+        MODELS_DIR,
+        REPORTS_DIR,
+    ]:
+        path.mkdir(parents=True, exist_ok=True)
+
+    return {"status": "reset", "removed": removed}
 
 
 def scan_market_once(show_progress: bool = True) -> pd.DataFrame:
@@ -104,9 +136,9 @@ def scan_market_once(show_progress: bool = True) -> pd.DataFrame:
     if not symbols:
         summary["status"] = "no_symbols"
         summary["headline"] = "No active symbols were available for scanning."
-    elif df.empty and request_errors.get("status_counts", {}).get("451"):
+    elif df.empty and _has_access_block(request_errors.get("status_counts", {})):
         summary["status"] = "blocked"
-        summary["headline"] = "Binance Futures rejected requests from the runner (HTTP 451)."
+        summary["headline"] = "Bybit rejected market-data requests from the runner."
     elif df.empty and failed:
         summary["status"] = "degraded"
         summary["headline"] = "All symbol scans failed before producing usable rows."
@@ -188,9 +220,9 @@ def write_runtime_payload(
     scanner_status = scan_summary.get("status", "unknown") if isinstance(scan_summary, dict) else "unknown"
     notes = []
 
-    if scanner_status == "blocked" or error_counts.get("451"):
+    if scanner_status == "blocked" or _has_access_block(error_counts):
         notes.append(
-            "GitHub-hosted runners are currently blocked by Binance Futures (HTTP 451), so automated scans are not collecting live market rows."
+            "The market-data provider is rejecting requests from this runner, so automated scans are not collecting live rows."
         )
     elif scanner_status == "degraded":
         notes.append("The scanner ran but did not produce usable rows for the latest cycle.")

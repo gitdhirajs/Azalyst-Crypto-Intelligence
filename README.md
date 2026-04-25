@@ -1,6 +1,6 @@
 # Coinglass ML Scanner
 
-This project scans Binance USDT perpetual futures, builds ML features from RSI, price, volume, funding, and open interest, and trains two separate XGBoost models:
+This project scans Bybit USDT perpetual futures, builds ML features from RSI, price, volume, funding, and open interest, and trains two separate XGBoost models:
 
 - `Main scanner model`: snapshot-based market scanner that scores current symbols using multi-timeframe RSI, OI, funding, and price features.
 - `Hourly candle-pattern model`: 1h continuation model focused on large candle bodies, volume expansion, RSI persistence, and open-interest behavior.
@@ -14,13 +14,14 @@ The project is now structured to run on GitHub Actions instead of relying on one
 - Training saves feature medians so live inference matches training-time imputation.
 - Hourly candle-pattern training is separate from the main scanner model.
 - Runtime artifacts are persisted to a dedicated `runtime-data` branch.
+- Manual workflow runs can reset runtime artifacts for a clean rebuild.
 
 ## Project Layout
 
 ```text
 jobs.py                      CLI entrypoint for one-shot jobs
 scanner.py                   Local loop runner
-src/collector.py             Binance market and OI collection
+src/collector.py             Bybit market and OI collection
 src/features.py              Main scanner feature engineering and time-based labels
 src/trainer.py               Main scanner model training and live prediction
 src/hourly_trainer.py        1h candle-pattern dataset, labels, training, reports
@@ -87,6 +88,10 @@ Generated runtime data is not kept on the code branch. Instead, workflows restor
 
 through a separate `runtime-data` branch.
 
+If Bybit blocks GitHub-hosted runners, set the repository variable
+`SCANNER_RUNNER` to a self-hosted runner label and run the workflows from an
+unblocked machine or VPS.
+
 ## Dashboard
 
 The web dashboard is published from `docs/` as:
@@ -98,7 +103,7 @@ It surfaces:
 - latest workflow status from GitHub Actions
 - runtime health from the `runtime-data` branch
 - local bootstrap model snapshots for the main and hourly ML models
-- known operational issues such as Binance blocking GitHub-hosted runners
+- known operational issues such as data-provider blocking on hosted runners
 
 ## Local Usage
 
@@ -112,6 +117,12 @@ Run a single automated cycle:
 
 ```bash
 python jobs.py scheduled
+```
+
+Clear generated runtime artifacts and start fresh:
+
+```bash
+python jobs.py reset-runtime --yes
 ```
 
 Run only the main scanner once:
@@ -148,6 +159,6 @@ HOURLY_CONTINUATION_THRESHOLD_PCT=1.5
 
 ## Notes
 
-- The scanner uses Binance public futures endpoints. No API key is required.
+- The scanner uses Bybit public futures endpoints. No API key is required.
 - `data/`, `logs/`, `models/`, and `reports/` are intentionally ignored on the code branch.
 - The dashboard remains useful locally, but GitHub Actions is now the primary execution path.

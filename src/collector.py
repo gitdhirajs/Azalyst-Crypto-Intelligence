@@ -23,6 +23,47 @@ SESSION.headers.update({"User-Agent": "CryptoScanner/2.0"})
 REQUEST_ERRORS: list[dict] = []
 
 
+def _float_or_none(value) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _require_ok(data: dict, endpoint: str) -> None:
+    ret_code = data.get("retCode")
+    if ret_code not in (None, 0, "0"):
+        raise RuntimeError(
+            f"Bybit {endpoint} returned retCode={ret_code}: {data.get('retMsg')}"
+        )
+
+
+def _ticker_row(d: dict) -> dict:
+    price_change_fraction = _float_or_none(d.get("price24hPcnt"))
+    open_interest = _float_or_none(d.get("openInterest"))
+    open_interest_value = _float_or_none(d.get("openInterestValue"))
+    funding_rate = _float_or_none(d.get("fundingRate"))
+
+    row = {
+        "price": float(d["lastPrice"]),
+        "price_change_pct_24h": (
+            price_change_fraction * 100 if price_change_fraction is not None else None
+        ),
+        "high_24h": float(d["highPrice24h"]),
+        "low_24h": float(d["lowPrice24h"]),
+        "volume_24h": float(d["turnover24h"]),
+    }
+    if open_interest is not None:
+        row["oi_contracts"] = open_interest
+    if open_interest_value is not None:
+        row["oi_value_now"] = open_interest_value
+    if funding_rate is not None:
+        row["funding_rate"] = funding_rate
+    return row
+
+
 def _extract_status_code(error: Exception) -> int | None:
     response = getattr(error, "response", None)
     status_code = getattr(response, "status_code", None)
@@ -79,6 +120,7 @@ def fetch_all_futures_symbols() -> List[str]:
         r = SESSION.get(url, params=params, timeout=15)
         r.raise_for_status()
         data = r.json()
+        _require_ok(data, "exchange_info")
         symbols = []
         for s in data.get("result", {}).get("list", []):
             if (s.get("status") == "Trading"
@@ -104,15 +146,10 @@ def fetch_all_tickers_bulk() -> dict:
         r = SESSION.get(url, params=params, timeout=15)
         r.raise_for_status()
         data = r.json()
+        _require_ok(data, "bulk_ticker")
         tickers = {}
         for d in data.get("result", {}).get("list", []):
-            tickers[d["symbol"]] = {
-                "price": float(d["lastPrice"]),
-                "price_change_pct_24h": float(d["price24hPcnt"]),
-                "high_24h": float(d["highPrice24h"]),
-                "low_24h": float(d["lowPrice24h"]),
-                "volume_24h": float(d["turnover24h"]),
-            }
+            tickers[d["symbol"]] = _ticker_row(d)
         return tickers
     except Exception as e:
         _record_request_error("bulk_ticker", e)
@@ -127,7 +164,11 @@ def filter_symbols_by_volume(symbols: List[str], tickers: dict) -> List[str]:
     valid = []
     for sym in symbols:
         t = tickers.get(sym)
-        if t and t["volume_24h"] >= MIN_VOLUME_24H_USDT:
+        if not t or t["volume_24h"] < MIN_VOLUME_24H_USDT:
+            continue
+        if MIN_OI_USDT > 0 and (t.get("oi_value_now") or 0) < MIN_OI_USDT:
+            continue
+        if t:
             valid.append((sym, t["volume_24h"]))
 
     valid.sort(key=lambda x: x[1], reverse=True)
@@ -188,20 +229,24 @@ def fetch_klines(symbol: str, interval: str, limit: int = KLINE_LIMIT) -> Option
         r = SESSION.get(url, params=params, timeout=10)
         r.raise_for_status()
         data = r.json()
+        _require_ok(data, "klines")
         result = data.get("result", {})
         klines_data = result.get("list", [])
         if not klines_data:
             return None
-        df = pd.DataFrame(klines_data, columns=[
-            "open_time", "open", "high", "low", "close", "volume",
-            "turnover", "trades"
-        ])
+        df = pd.DataFrame(klines_data)
+        if df.shape[1] < 7:
+            raise ValueError(f"Bybit kline returned {df.shape[1]} columns, expected at least 7")
+        df = df.iloc[:, :7]
+        df.columns = [
+            "open_time", "open", "high", "low", "close", "volume", "turnover"
+        ]
         for col in ["open", "high", "low", "close", "volume", "turnover"]:
             df[col] = df[col].astype(float)
-        df["open_time"] = pd.to_datetime(df["open_time"], unit="ms", utc=True)
+        df["open_time"] = pd.to_datetime(pd.to_numeric(df["open_time"]), unit="ms", utc=True)
         df.rename(columns={"turnover": "quote_volume"}, inplace=True)
         df["close_time"] = df["open_time"]
-        return df
+        return df.sort_values("open_time").reset_index(drop=True)
     except Exception as e:
         _record_request_error("klines", e, symbol=symbol, interval=interval)
         print(f"  [ERR] klines {symbol} {interval}: {e}")
@@ -249,20 +294,26 @@ def get_multi_tf_rsi(symbol: str) -> dict:
 #  Open Interest
 # ──────────────────────────────────────────────────────────
 def fetch_open_interest(symbol: str) -> Optional[dict]:
-    """Current open interest (contracts + value)."""
-    url = f"{BYBIT_V5_BASE}/market/open-interest"
+    """Current open interest from Bybit ticker metadata."""
+    url = f"{BYBIT_V5_BASE}/market/tickers"
     params = {"category": "linear", "symbol": symbol}
     try:
         r = SESSION.get(url, params=params, timeout=10)
         r.raise_for_status()
         data = r.json()
+        _require_ok(data, "open_interest")
         result = data.get("result", {})
         list_data = result.get("list", [])
         if not list_data:
             return None
         oi_data = list_data[0]
+        open_interest = _float_or_none(oi_data.get("openInterest"))
+        open_interest_value = _float_or_none(oi_data.get("openInterestValue"))
+        if open_interest is None:
+            return None
         return {
-            "oi_contracts": float(oi_data["openInterest"]),
+            "oi_contracts": open_interest,
+            "oi_value_now": open_interest_value,
             "oi_time": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as e:
@@ -275,8 +326,13 @@ def fetch_oi_history(symbol: str, period: str = "5m", limit: int = 30) -> Option
     """Open interest statistics (with value in USDT)."""
     # Map period to Bybit interval format
     period_map = {
-        "1m": "1", "5m": "5", "15m": "15", "30m": "30",
-        "1h": "60", "4h": "240", "1d": "D"
+        "1m": "5min",
+        "5m": "5min",
+        "15m": "15min",
+        "30m": "30min",
+        "1h": "1h",
+        "4h": "4h",
+        "1d": "1d",
     }
     bybit_period = period_map.get(period, period)
     
@@ -286,17 +342,17 @@ def fetch_oi_history(symbol: str, period: str = "5m", limit: int = 30) -> Option
         r = SESSION.get(url, params=params, timeout=10)
         r.raise_for_status()
         data = r.json()
+        _require_ok(data, "open_interest_history")
         result = data.get("result", {})
         list_data = result.get("list", [])
         if not list_data:
             return None
         df = pd.DataFrame(list_data)
         df["openInterest"] = df["openInterest"].astype(float)
-        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
-        # Create sumOpenInterestValue as openInterest * price approximation
+        df["timestamp"] = pd.to_datetime(pd.to_numeric(df["timestamp"]), unit="ms", utc=True)
         df["sumOpenInterestValue"] = df["openInterest"]
         df.rename(columns={"openInterest": "sumOpenInterest"}, inplace=True)
-        return df
+        return df.sort_values("timestamp").reset_index(drop=True)
     except Exception as e:
         _record_request_error("open_interest_history", e, symbol=symbol, period=period)
         print(f"  [ERR] OI history {symbol}: {e}")
@@ -314,18 +370,12 @@ def fetch_ticker(symbol: str) -> Optional[dict]:
         r = SESSION.get(url, params=params, timeout=10)
         r.raise_for_status()
         data = r.json()
+        _require_ok(data, "ticker")
         result = data.get("result", {})
         list_data = result.get("list", [])
         if not list_data:
             return None
-        d = list_data[0]
-        return {
-            "price": float(d["lastPrice"]),
-            "price_change_pct_24h": float(d["price24hPcnt"]),
-            "high_24h": float(d["highPrice24h"]),
-            "low_24h": float(d["lowPrice24h"]),
-            "volume_24h": float(d["turnover24h"]),
-        }
+        return _ticker_row(list_data[0])
     except Exception as e:
         _record_request_error("ticker", e, symbol=symbol)
         print(f"  [ERR] ticker {symbol}: {e}")
@@ -343,6 +393,7 @@ def fetch_funding_rate(symbol: str) -> Optional[float]:
         r = SESSION.get(url, params=params, timeout=10)
         r.raise_for_status()
         data = r.json()
+        _require_ok(data, "funding_rate")
         result = data.get("result", {})
         list_data = result.get("list", [])
         if not list_data:
@@ -388,22 +439,27 @@ def scan_symbol(
     row.update(rsi_data)
 
     # Open Interest
-    oi = fetch_open_interest(symbol)
-    if oi:
-        row["oi_contracts"] = oi["oi_contracts"]
+    if "oi_contracts" not in row:
+        oi = fetch_open_interest(symbol)
+        if oi:
+            row["oi_contracts"] = oi["oi_contracts"]
+            if oi.get("oi_value_now") is not None:
+                row["oi_value_now"] = oi["oi_value_now"]
 
     # OI history for change detection
     oi_hist = fetch_oi_history(symbol, period="5m", limit=12)
     if oi_hist is not None and len(oi_hist) >= 2:
         row["oi_value_now"] = oi_hist["sumOpenInterestValue"].iloc[-1]
         row["oi_value_1h_ago"] = oi_hist["sumOpenInterestValue"].iloc[0]
-        row["oi_change_pct_1h"] = round(
-            (row["oi_value_now"] - row["oi_value_1h_ago"]) / row["oi_value_1h_ago"] * 100, 3
-        )
+        if row["oi_value_1h_ago"]:
+            row["oi_change_pct_1h"] = round(
+                (row["oi_value_now"] - row["oi_value_1h_ago"]) / row["oi_value_1h_ago"] * 100, 3
+            )
 
     # Funding rate
-    funding = fetch_funding_rate(symbol)
-    if funding is not None:
-        row["funding_rate"] = funding
+    if "funding_rate" not in row:
+        funding = fetch_funding_rate(symbol)
+        if funding is not None:
+            row["funding_rate"] = funding
 
     return row

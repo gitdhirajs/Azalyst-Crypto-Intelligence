@@ -2,6 +2,12 @@ name: Main Scanner
 
 on:
   workflow_dispatch:
+    inputs:
+      reset_runtime:
+        description: "Clear runtime-data artifacts before this run"
+        required: false
+        type: boolean
+        default: false
   schedule:
     - cron: "*/15 * * * *"
 
@@ -14,7 +20,7 @@ concurrency:
 
 jobs:
   scan-and-train:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.SCANNER_RUNNER || 'ubuntu-latest' }}
     env:
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       LABEL_HORIZON_MINUTES: "60"
@@ -60,6 +66,13 @@ jobs:
 
       - name: Restore runtime state
         run: |
+          if [ "${{ github.event.inputs.reset_runtime }}" = "true" ]; then
+            echo "Runtime reset requested; skipping restore from runtime-data."
+            rm -rf data logs models reports
+            mkdir -p data logs models reports
+            exit 0
+          fi
+
           mkdir -p data logs models reports
           for dir in data logs models reports; do
             if [ -d "runtime-data/$dir" ]; then
@@ -72,6 +85,10 @@ jobs:
 
       - name: Persist runtime state
         run: |
+          if [ "${{ github.event.inputs.reset_runtime }}" = "true" ]; then
+            rm -rf runtime-data/data runtime-data/logs runtime-data/models runtime-data/reports
+          fi
+
           mkdir -p runtime-data/data runtime-data/logs runtime-data/models runtime-data/reports
           for dir in data logs models reports; do
             rsync -a --delete "$dir/" "runtime-data/$dir/"

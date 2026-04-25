@@ -7,6 +7,11 @@ const CONFIG = {
 };
 
 const API_BASE = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}`;
+const WORKFLOW_CARDS = [
+  { label: "Main Scanner", names: ["Main Scanner"] },
+  { label: "Hourly Candle Patterns", names: ["Hourly Candle Patterns"] },
+  { label: "Pages Deploy", names: ["pages build and deployment", "Deploy Dashboard"] },
+];
 
 const els = {
   liveStatus: document.getElementById("liveStatus"),
@@ -185,46 +190,42 @@ function latestRunByName(runs) {
   return latest;
 }
 
+function findLatestRun(latest, names) {
+  for (const name of names) {
+    if (latest.has(name)) {
+      return latest.get(name);
+    }
+  }
+  return null;
+}
+
 function mergePayloads(bootstrap, runtime) {
+  const hasRuntime = Boolean(runtime);
   const runtimeMain = runtime?.main_report;
   const runtimeHourly = runtime?.hourly_report;
   const bootstrapMain = bootstrap?.main_report;
   const bootstrapHourly = bootstrap?.hourly_report;
 
-  const mainReport =
-    runtimeMain?.status === "trained" ? runtimeMain : bootstrapMain || runtimeMain || null;
-  const hourlyReport =
-    runtimeHourly?.status === "trained"
-      ? runtimeHourly
-      : bootstrapHourly || runtimeHourly || null;
+  const mainReport = hasRuntime ? runtimeMain || null : bootstrapMain || null;
+  const hourlyReport = hasRuntime ? runtimeHourly || null : bootstrapHourly || null;
 
-  const hourlySignals =
-    (runtime?.hourly_live_signals && runtime.hourly_live_signals.length
-      ? runtime.hourly_live_signals
-      : null) ||
-    (bootstrap?.hourly_live_signals && bootstrap.hourly_live_signals.length
-      ? bootstrap.hourly_live_signals
-      : null) ||
-    hourlyReport?.top_live_signals ||
-    [];
+  const hourlySignals = hasRuntime
+    ? runtime?.hourly_live_signals || runtimeHourly?.top_live_signals || []
+    : bootstrap?.hourly_live_signals || bootstrapHourly?.top_live_signals || [];
 
   return {
     runtime_status: runtime?.runtime_status || bootstrap?.runtime_status || {},
     main_report: mainReport,
     hourly_report: hourlyReport,
     latest_scan_signals:
-      runtime?.latest_scan_signals || bootstrap?.latest_scan_signals || [],
+      hasRuntime ? runtime?.latest_scan_signals || [] : bootstrap?.latest_scan_signals || [],
     hourly_live_signals: hourlySignals,
     summary_markdown:
       runtime?.summary_markdown || bootstrap?.summary_markdown || "No summary published yet.",
     mainReportSource:
-      runtimeMain?.status === "trained" ? "runtime-data" : bootstrapMain ? "local bootstrap" : "missing",
+      hasRuntime ? "runtime-data" : bootstrapMain ? "local bootstrap" : "missing",
     hourlyReportSource:
-      runtimeHourly?.status === "trained"
-        ? "runtime-data"
-        : bootstrapHourly
-          ? "local bootstrap"
-          : "missing",
+      hasRuntime ? "runtime-data" : bootstrapHourly ? "local bootstrap" : "missing",
   };
 }
 
@@ -243,10 +244,10 @@ function renderTicker(repo, runtimeStatus, latestWorkflows) {
     `HOURLY AUC ${hourly.roc_auc != null ? formatDecimal(hourly.roc_auc, 3) : "n/a"}`,
   ];
 
-  for (const name of ["Main Scanner", "Hourly Candle Patterns", "Deploy Dashboard"]) {
-    const run = latestWorkflows.get(name);
+  for (const item of WORKFLOW_CARDS) {
+    const run = findLatestRun(latestWorkflows, item.names);
     if (run) {
-      items.push(`${name.toUpperCase()} ${run.conclusion || run.status}`);
+      items.push(`${item.label.toUpperCase()} ${run.conclusion || run.status}`);
     }
   }
 
@@ -255,12 +256,12 @@ function renderTicker(repo, runtimeStatus, latestWorkflows) {
 
 function renderWorkflowCards(runs) {
   const latest = latestRunByName(runs);
-  const cards = ["Main Scanner", "Hourly Candle Patterns", "Deploy Dashboard"].map((name) => {
-    const run = latest.get(name);
+  const cards = WORKFLOW_CARDS.map((item) => {
+    const run = findLatestRun(latest, item.names);
     if (!run) {
       return `
         <div class="metric-card">
-          <span class="metric-label">${name}</span>
+          <span class="metric-label">${item.label}</span>
           <div class="metric-value">No runs yet</div>
           <div class="metric-subtle">Waiting for first execution.</div>
         </div>
@@ -271,7 +272,7 @@ function renderWorkflowCards(runs) {
     return `
       <div class="metric-card">
         <div class="meta-line">
-          <strong>${name}</strong>
+          <strong>${item.label}</strong>
           <span class="pill pill-${statusTone(state)}">${state}</span>
         </div>
         <div class="metric-subtle">
@@ -313,7 +314,7 @@ function renderRuntimeStatus(runtimeStatus, usedRuntimePayload) {
       <div class="stat-box">
         <span class="metric-label">Failures</span>
         <div class="metric-value">${formatNumber(scanner.symbols_failed || 0)}</div>
-        <div class="metric-subtle">451s ${requestErrors.status_counts?.["451"] || 0}</div>
+        <div class="metric-subtle">403s ${requestErrors.status_counts?.["403"] || 0} / 451s ${requestErrors.status_counts?.["451"] || 0}</div>
       </div>
     </div>
     <div class="meta-list">
@@ -323,7 +324,7 @@ function renderRuntimeStatus(runtimeStatus, usedRuntimePayload) {
       </div>
       <div class="meta-line">
         <span>Known issue signal</span>
-        <strong>${requestErrors.status_counts?.["451"] ? "Binance block observed" : "No 451 captured"}</strong>
+        <strong>${requestErrors.status_counts?.["403"] || requestErrors.status_counts?.["451"] ? "Provider block observed" : "No provider block captured"}</strong>
       </div>
       <div class="meta-line">
         <span>Endpoints with errors</span>
@@ -603,7 +604,7 @@ function renderIssues(runtimeStatus, latestWorkflows, payload) {
 
   if (scanner.status === "blocked") {
     notes.unshift(
-      "GitHub-hosted runners are succeeding as jobs, but Binance Futures is rejecting the data requests with HTTP 451."
+      "GitHub-hosted runners are succeeding as jobs, but the market-data provider is rejecting the data requests."
     );
   }
 
@@ -615,7 +616,7 @@ function renderIssues(runtimeStatus, latestWorkflows, payload) {
     notes.push("Hourly candle-pattern metrics are also being shown from the local bootstrap snapshot.");
   }
 
-  const deployRun = latestWorkflows.get("Deploy Dashboard");
+  const deployRun = findLatestRun(latestWorkflows, ["pages build and deployment", "Deploy Dashboard"]);
   if (!deployRun) {
     notes.push("GitHub Pages deployment history has not been observed yet; the site may still be bootstrapping.");
   }
