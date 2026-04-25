@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   scan-and-train:
-    runs-on: ${{ vars.SCANNER_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(vars.SCANNER_RUNNER || '"ubuntu-latest"') }}
     env:
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       LABEL_HORIZON_MINUTES: "60"

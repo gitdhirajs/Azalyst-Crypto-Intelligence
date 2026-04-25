@@ -89,8 +89,9 @@ Generated runtime data is not kept on the code branch. Instead, workflows restor
 through a separate `runtime-data` branch.
 
 If Bybit blocks GitHub-hosted runners, set the repository variable
-`SCANNER_RUNNER` to a self-hosted runner label and run the workflows from an
-unblocked machine or VPS.
+`SCANNER_RUNNER` to a JSON runner label array such as
+`["self-hosted","scanner"]` and run the workflows from an unblocked machine or
+VPS.
 
 ## Dashboard
 
