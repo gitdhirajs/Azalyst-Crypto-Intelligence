@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-04-25T14:32:21.401458+00:00",
+  "generated_at": "2026-04-25T16:07:43.625548+00:00",
   "dashboard_name": "Azalyst Coinglass Scanner",
   "runtime_status": {
-    "generated_at": "2026-04-25T14:32:21.401458+00:00",
+    "generated_at": "2026-04-25T16:07:43.625548+00:00",
     "dashboard_name": "Azalyst Coinglass Scanner",
     "source_mode": "github_actions",
     "scanner": {
-      "timestamp": "2026-04-25T14:11:55.821993+00:00",
-      "status": "degraded",
-      "headline": "All symbol scans failed before producing usable rows.",
+      "timestamp": "2026-04-25T16:07:43.022005+00:00",
+      "status": "blocked",
+      "headline": "Bybit rejected market-data requests from the runner.",
       "symbols_attempted": 20,
       "symbols_scanned": 0,
       "symbols_failed": 20,
@@ -92,7 +92,7 @@
       "hourly_patterns": "7 * * * *"
     },
     "notes": [
-      "The scanner ran but did not produce usable rows for the latest cycle."
+      "The market-data provider is rejecting requests from this runner, so automated scans are not collecting live rows."
     ]
   },
   "main_report": null,
