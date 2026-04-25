@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-04-25T11:27:22.406488+00:00",
+  "timestamp": "2026-04-25T14:11:55.821993+00:00",
   "status": "degraded",
   "headline": "All symbol scans failed before producing usable rows.",
   "symbols_attempted": 20,
