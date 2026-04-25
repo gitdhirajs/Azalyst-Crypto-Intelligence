@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-04-25T17:25:54.110417+00:00",
+  "generated_at": "2026-04-25T18:07:03.203074+00:00",
   "dashboard_name": "Azalyst Coinglass Scanner",
   "runtime_status": {
-    "generated_at": "2026-04-25T17:25:54.110417+00:00",
+    "generated_at": "2026-04-25T18:07:03.203074+00:00",
     "dashboard_name": "Azalyst Coinglass Scanner",
     "source_mode": "github_actions",
     "scanner": {
-      "timestamp": "2026-04-25T16:07:43.022005+00:00",
+      "timestamp": "2026-04-25T18:07:02.807223+00:00",
       "status": "blocked",
       "headline": "Bybit rejected market-data requests from the runner.",
       "symbols_attempted": 20,
