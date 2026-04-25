@@ -98,43 +98,6 @@ def best_hourly_signals(rows: List[Dict[str, Any]], limit: int = 5) -> List[Dict
     )[:limit]
 
 
-def scan_take(signal: Dict[str, Any]) -> str:
-    price_change = float(signal.get("price_change_pct_24h") or 0.0)
-    oi_change = float(signal.get("oi_change_pct_1h") or 0.0)
-    ml_prob = signal.get("ml_probability")
-    if ml_prob is not None:
-        try:
-            if float(ml_prob) >= 0.65:
-                return "model-backed upside watch"
-            if float(ml_prob) <= 0.35:
-                return "model-backed weak setup"
-        except (TypeError, ValueError):
-            pass
-    if price_change >= 8 and oi_change >= 0:
-        return "up hard with open interest still building"
-    if price_change <= -8 and oi_change >= 0:
-        return "down hard while open interest rises, which can mean crowded positioning"
-    if price_change >= 5:
-        return "strong upside move, but still needs confirmation"
-    if price_change <= -5:
-        return "heavy downside move, better treated as caution than chase"
-    if abs(oi_change) >= 1:
-        return "positioning shifted even though price is not moving cleanly"
-    return "quiet or mixed tape right now"
-
-
-def hourly_take(signal: Dict[str, Any]) -> str:
-    probability = float(signal.get("continuation_probability") or 0.0)
-    candle_return = float(signal.get("candle_return_pct") or 0.0)
-    if probability >= 0.85:
-        return "hourly pattern model sees strong continuation odds"
-    if probability >= 0.65:
-        return "hourly continuation watch"
-    if candle_return < 0:
-        return "sell candle, but continuation confidence is only moderate"
-    return "low continuation confidence"
-
-
 def build_human_summary(payload: Dict[str, Any]) -> str:
     runtime = payload.get("runtime_status") or {}
     scanner = runtime.get("scanner") or {}
@@ -220,7 +183,6 @@ def build_scan_embed(rows: List[Dict[str, Any]]) -> str:
             "\n".join(
                 [
                     f"**{row.get('symbol', '?')}**",
-                    f"Plain-English: {scan_take(row)}.",
                     (
                         f"Tech: price {fmt_num(row.get('price'), 4)} | 24h move {fmt_pct(row.get('price_change_pct_24h'), 2)} | "
                         f"OI 1h {fmt_pct(row.get('oi_change_pct_1h'), 2)} | funding {fmt_num(row.get('funding_rate'), 6)} | "
@@ -243,7 +205,6 @@ def build_hourly_embed(rows: List[Dict[str, Any]]) -> str:
             "\n".join(
                 [
                     f"**{row.get('symbol', '?')}**",
-                    f"Plain-English: {hourly_take(row)}.",
                     (
                         f"Tech: continuation {fmt_prob(row.get('continuation_probability'), 2)} | "
                         f"prediction {row.get('continuation_prediction', 'n/a')} | candle return {fmt_pct(row.get('candle_return_pct'), 2)} | "
