@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-04-25T09:14:30.086521+00:00",
+  "generated_at": "2026-04-25T10:06:41.039570+00:00",
   "dashboard_name": "Azalyst Coinglass Scanner",
   "runtime_status": {
-    "generated_at": "2026-04-25T09:14:30.086521+00:00",
+    "generated_at": "2026-04-25T10:06:41.039570+00:00",
     "dashboard_name": "Azalyst Coinglass Scanner",
     "source_mode": "github_actions",
     "scanner": {
