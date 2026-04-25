@@ -302,11 +302,13 @@ def build_payload(
     dashboard_url: str,
     repo_url: str,
     run_url: str,
+    update_kind: str,
 ) -> Dict[str, Any]:
+    kind_label = update_kind.strip() if update_kind.strip() else "runtime"
     links = [f"[Dashboard]({dashboard_url})", f"[Repo]({repo_url})"]
     if run_url:
         links.append(f"[Workflow Run]({run_url})")
-    content = "New coinglass-scanner update. " + " | ".join(links)
+    content = f"New coinglass-scanner {kind_label} update. " + " | ".join(links)
 
     return {
         "username": "Coinglass Scanner",
@@ -314,7 +316,7 @@ def build_payload(
         "content": content,
         "embeds": [
             {
-                "title": "Coinglass Scanner - Human Summary",
+                "title": f"Coinglass Scanner - {kind_label.title()} Summary",
                 "color": 0xF97316,
                 "description": build_human_summary(runtime_payload),
             },
@@ -353,6 +355,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dashboard-url", default=DEFAULT_DASHBOARD_URL)
     parser.add_argument("--repo-url", default=DEFAULT_REPO_URL)
     parser.add_argument("--run-url", default="")
+    parser.add_argument("--update-kind", default="runtime")
     parser.add_argument("--payload-path", default=str(DEFAULT_PAYLOAD_PATH))
     parser.add_argument("--summary-path", default=str(DEFAULT_SUMMARY_PATH))
     parser.add_argument("--payload-out", default="")
@@ -370,6 +373,7 @@ def main() -> int:
         dashboard_url=args.dashboard_url,
         repo_url=args.repo_url,
         run_url=args.run_url,
+        update_kind=args.update_kind,
     )
 
     if args.payload_out:
