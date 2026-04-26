@@ -13,13 +13,13 @@
 
 | symbol | price | price_change_pct_24h | ml_probability |
 | --- | --- | --- | --- |
-| BTCUSDT | 78012.5 | 0.38999999999999996 | None |
-| ETHUSDT | 2346.47 | 1.39 | None |
-| SOLUSDT | 86.32 | -0.27999999999999997 | None |
-| BSBUSDT | 0.67772 | 8.07 | None |
-| RAVEUSDT | 0.89365 | -0.01 | None |
-| SKYAIUSDT | 0.18607 | -4.37 | None |
-| AINUSDT | 0.07364 | 18.64 | None |
-| ORCAUSDT | 1.6448 | 41.86 | None |
-| ZECUSDT | 355.09 | -1.25 | None |
-| PEPEUSDT | 3.9134e-06 | 1.46 | None |
+| BTCUSDT | 77973.76 | 0.76 | None |
+| ETHUSDT | 2344.52 | 1.48 | None |
+| SOLUSDT | 86.384 | 0.64 | None |
+| BSBUSDT | 0.77961 | 4.33 | None |
+| RAVEUSDT | 0.92751 | 16.31 | None |
+| ORCAUSDT | 1.4461 | 19.89 | None |
+| AINUSDT | 0.07589 | 20.73 | None |
+| SKYAIUSDT | 0.185 | -8.0 | None |
+| ZECUSDT | 355.69 | -0.03 | None |
+| PEPEUSDT | 3.8897e-06 | 1.95 | None |
