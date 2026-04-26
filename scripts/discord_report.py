@@ -266,10 +266,11 @@ def build_payload(
     update_kind: str,
 ) -> Dict[str, Any]:
     kind_label = update_kind.strip() if update_kind.strip() else "runtime"
+    display_kind = kind_label.title()
     links = [f"[Dashboard]({dashboard_url})", f"[Repo]({repo_url})"]
     if run_url:
         links.append(f"[Workflow Run]({run_url})")
-    content = f"New coinglass-scanner {kind_label} update. " + " | ".join(links)
+    content = f"Coinglass Scanner | {display_kind} | " + " | ".join(links)
 
     return {
         "username": "Coinglass Scanner",
@@ -277,27 +278,27 @@ def build_payload(
         "content": content,
         "embeds": [
             {
-                "title": f"Coinglass Scanner - {kind_label.title()} Summary",
+                "title": f"{display_kind} Brief",
                 "color": 0xF97316,
                 "description": build_human_summary(runtime_payload),
             },
             {
-                "title": "Current Scan Signals",
+                "title": "Signal Board",
                 "color": 0x2563EB,
                 "description": build_scan_embed(runtime_payload.get("latest_scan_signals") or []),
             },
             {
-                "title": "Hourly Continuation Signals",
+                "title": "Hourly Continuation Board",
                 "color": 0x16A34A,
                 "description": build_hourly_embed(runtime_payload.get("hourly_live_signals") or []),
             },
             {
-                "title": "Technical + Process Details",
+                "title": "Model + Run Details",
                 "color": 0x64748B,
                 "description": build_process_embed(runtime_payload),
             },
             {
-                "title": "Scanner Summary Report",
+                "title": "Research Note",
                 "color": 0x7C3AED,
                 "description": build_summary_embed(summary_markdown),
             },
