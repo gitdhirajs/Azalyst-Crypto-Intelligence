@@ -23,12 +23,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.SCANNER_RUNNER || '"ubuntu-latest"') }}
     env:
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
-      MARKET_DATA_PROVIDERS: "binance,bybit"
-      MARKET_PROXY_HOST: "ddc.oxylabs.io"
-      MARKET_PROXY_PORT: "8001"
-      MARKET_PROXY_USERNAME: ${{ secrets.OXYLABS_USERNAME }}
-      MARKET_PROXY_PASSWORD: ${{ secrets.OXYLABS_PASSWORD }}
-      MARKET_PROXY_FALLBACK_DIRECT: "true"
+      MARKET_DATA_PROVIDERS: "kucoin,bitget"
       LABEL_HORIZON_MINUTES: "60"
       LABEL_LOOKAHEAD_TOLERANCE_MINUTES: "45"
       MAX_SYMBOLS_PER_SCAN: "0"

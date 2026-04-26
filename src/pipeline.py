@@ -32,9 +32,6 @@ from src.config import (
     LABELS_DIR,
     LOGS_DIR,
     MARKET_DATA_PROVIDERS,
-    MARKET_PROXY_HOST,
-    MARKET_PROXY_PORT,
-    MARKET_PROXY_URL,
     MIN_VOLUME_24H_USDT,
     MODELS_DIR,
     RAW_DIR,
@@ -136,14 +133,6 @@ def scan_market_once(show_progress: bool = True) -> pd.DataFrame:
         "symbols_failed": int(failed),
         "min_volume_24h_usdt": MIN_VOLUME_24H_USDT,
         "provider_priority": MARKET_DATA_PROVIDERS,
-        "proxy": {
-            "enabled": bool(MARKET_PROXY_URL),
-            "endpoint": (
-                f"{MARKET_PROXY_HOST}:{MARKET_PROXY_PORT}"
-                if MARKET_PROXY_HOST and MARKET_PROXY_PORT
-                else None
-            ),
-        },
         "request_errors": request_errors,
     }
     if not symbols:
@@ -244,11 +233,6 @@ def write_runtime_payload(
 
     if MARKET_DATA_PROVIDERS:
         notes.append(f"Provider order: {' -> '.join(MARKET_DATA_PROVIDERS)}.")
-    if MARKET_PROXY_URL:
-        if MARKET_PROXY_HOST and MARKET_PROXY_PORT:
-            notes.append(f"Outbound proxy enabled via {MARKET_PROXY_HOST}:{MARKET_PROXY_PORT}.")
-        else:
-            notes.append("Outbound proxy is enabled for market-data requests.")
 
     if latest_main and latest_main.get("status") == "trained":
         notes.append("Main scanner model metrics below come from the most recent successful training snapshot.")
