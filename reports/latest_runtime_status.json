@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-26T05:12:45.686229+00:00",
+  "generated_at": "2026-04-26T05:14:25.287946+00:00",
   "dashboard_name": "Coinglass Scanner",
   "source_mode": "github_actions",
   "scanner": {
@@ -23,18 +23,18 @@
     }
   },
   "main_model": {
-    "status": "no_labeled_data",
+    "status": "missing",
     "timestamp": null,
     "accuracy": null,
     "roc_auc": null,
     "samples": null
   },
   "hourly_model": {
-    "status": "missing",
-    "timestamp": null,
-    "accuracy": null,
-    "roc_auc": null,
-    "samples": null
+    "status": "trained",
+    "timestamp": "2026-04-26T05:14:23.939799+00:00",
+    "accuracy": 0.7196,
+    "roc_auc": 0.7575,
+    "samples": 11430
   },
   "workflow_schedules": {
     "main_scanner": "*/15 * * * *",
@@ -42,6 +42,7 @@
   },
   "notes": [
     "The scanner completed and produced live market rows for the latest cycle.",
-    "Provider order: kucoin -> bitget."
+    "Provider order: kucoin -> bitget.",
+    "Hourly candle-pattern model metrics below come from the most recent successful training snapshot."
   ]
 }

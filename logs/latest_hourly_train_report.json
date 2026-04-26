@@ -1,0 +1,512 @@
+{
+  "status": "trained",
+  "timestamp": "2026-04-26T05:14:23.939799+00:00",
+  "model_name": "hourly_candle_pattern_xgboost",
+  "continuation_window_hours": 3,
+  "continuation_threshold_pct": 1.5,
+  "n_samples": 11430,
+  "n_train": 9144,
+  "n_test": 2286,
+  "n_symbols": 69,
+  "accuracy": 0.7196,
+  "f1_score": 0.6541,
+  "roc_auc": 0.7575,
+  "baseline_accuracy": 0.5988,
+  "label_distribution": {
+    "0": 6844,
+    "1": 4586
+  },
+  "top_features": [
+    [
+      "range_pct",
+      0.17672325670719147
+    ],
+    [
+      "volatility_6h",
+      0.062316928058862686
+    ],
+    [
+      "range_vs_avg_12h",
+      0.036256201565265656
+    ],
+    [
+      "price_oi_alignment",
+      0.032973747700452805
+    ],
+    [
+      "candle_return_pct",
+      0.03266947716474533
+    ],
+    [
+      "oi_change_pct_6h",
+      0.030360668897628784
+    ],
+    [
+      "rsi_mean_6h",
+      0.029276035726070404
+    ],
+    [
+      "current_price_change_pct_24h",
+      0.02893359772861004
+    ],
+    [
+      "lower_wick_pct",
+      0.028821542859077454
+    ],
+    [
+      "rsi_mean_3h",
+      0.028549695387482643
+    ]
+  ],
+  "bucket_analysis": {
+    "rsi_1h": {
+      "top_continuation_ranges": [
+        {
+          "bucket": "80+",
+          "count": 137,
+          "continuation_rate": 0.7956
+        },
+        {
+          "bucket": "65-80",
+          "count": 1091,
+          "continuation_rate": 0.4885
+        },
+        {
+          "bucket": "50-65",
+          "count": 3818,
+          "continuation_rate": 0.3999
+        },
+        {
+          "bucket": "35-50",
+          "count": 3955,
+          "continuation_rate": 0.3823
+        },
+        {
+          "bucket": "<=35",
+          "count": 1463,
+          "continuation_rate": 0.3356
+        }
+      ],
+      "weak_continuation_ranges": [
+        {
+          "bucket": "<=35",
+          "count": 1463,
+          "continuation_rate": 0.3356
+        },
+        {
+          "bucket": "35-50",
+          "count": 3955,
+          "continuation_rate": 0.3823
+        },
+        {
+          "bucket": "50-65",
+          "count": 3818,
+          "continuation_rate": 0.3999
+        },
+        {
+          "bucket": "65-80",
+          "count": 1091,
+          "continuation_rate": 0.4885
+        },
+        {
+          "bucket": "80+",
+          "count": 137,
+          "continuation_rate": 0.7956
+        }
+      ]
+    },
+    "body_pct": {
+      "top_continuation_ranges": [
+        {
+          "bucket": "4.0+",
+          "count": 552,
+          "continuation_rate": 0.8116
+        },
+        {
+          "bucket": "2.0-4.0",
+          "count": 1009,
+          "continuation_rate": 0.6561
+        },
+        {
+          "bucket": "1.0-2.0",
+          "count": 2151,
+          "continuation_rate": 0.4886
+        },
+        {
+          "bucket": "0.5-1.0",
+          "count": 2591,
+          "continuation_rate": 0.3879
+        },
+        {
+          "bucket": "<=0.5",
+          "count": 5127,
+          "continuation_rate": 0.277
+        }
+      ],
+      "weak_continuation_ranges": [
+        {
+          "bucket": "<=0.5",
+          "count": 5127,
+          "continuation_rate": 0.277
+        },
+        {
+          "bucket": "0.5-1.0",
+          "count": 2591,
+          "continuation_rate": 0.3879
+        },
+        {
+          "bucket": "1.0-2.0",
+          "count": 2151,
+          "continuation_rate": 0.4886
+        },
+        {
+          "bucket": "2.0-4.0",
+          "count": 1009,
+          "continuation_rate": 0.6561
+        },
+        {
+          "bucket": "4.0+",
+          "count": 552,
+          "continuation_rate": 0.8116
+        }
+      ]
+    },
+    "volume_ratio_6h": {
+      "top_continuation_ranges": [
+        {
+          "bucket": "3.0+",
+          "count": 129,
+          "continuation_rate": 0.4729
+        },
+        {
+          "bucket": "2.0-3.0",
+          "count": 351,
+          "continuation_rate": 0.4473
+        },
+        {
+          "bucket": "1.5-2.0",
+          "count": 660,
+          "continuation_rate": 0.4136
+        },
+        {
+          "bucket": "1.0-1.5",
+          "count": 3889,
+          "continuation_rate": 0.3996
+        },
+        {
+          "bucket": "<=1.0",
+          "count": 6332,
+          "continuation_rate": 0.3959
+        }
+      ],
+      "weak_continuation_ranges": [
+        {
+          "bucket": "<=1.0",
+          "count": 6332,
+          "continuation_rate": 0.3959
+        },
+        {
+          "bucket": "1.0-1.5",
+          "count": 3889,
+          "continuation_rate": 0.3996
+        },
+        {
+          "bucket": "1.5-2.0",
+          "count": 660,
+          "continuation_rate": 0.4136
+        },
+        {
+          "bucket": "2.0-3.0",
+          "count": 351,
+          "continuation_rate": 0.4473
+        },
+        {
+          "bucket": "3.0+",
+          "count": 129,
+          "continuation_rate": 0.4729
+        }
+      ]
+    },
+    "oi_change_pct_1h": {
+      "top_continuation_ranges": [
+        {
+          "bucket": "<=-10",
+          "count": 36,
+          "continuation_rate": 0.7778
+        },
+        {
+          "bucket": "10+",
+          "count": 55,
+          "continuation_rate": 0.7273
+        },
+        {
+          "bucket": "3 to 10",
+          "count": 120,
+          "continuation_rate": 0.5833
+        },
+        {
+          "bucket": "-10 to -3",
+          "count": 155,
+          "continuation_rate": 0.5161
+        },
+        {
+          "bucket": "-3 to 0",
+          "count": 638,
+          "continuation_rate": 0.3213
+        }
+      ],
+      "weak_continuation_ranges": [
+        {
+          "bucket": "0 to 3",
+          "count": 554,
+          "continuation_rate": 0.3195
+        },
+        {
+          "bucket": "-3 to 0",
+          "count": 638,
+          "continuation_rate": 0.3213
+        },
+        {
+          "bucket": "-10 to -3",
+          "count": 155,
+          "continuation_rate": 0.5161
+        },
+        {
+          "bucket": "3 to 10",
+          "count": 120,
+          "continuation_rate": 0.5833
+        },
+        {
+          "bucket": "10+",
+          "count": 55,
+          "continuation_rate": 0.7273
+        }
+      ]
+    },
+    "pattern_clusters": {
+      "top_gainer_clusters": [
+        {
+          "cluster": "RSI 35-50 | Vol <=1.0 | OI <=-10",
+          "count": 10,
+          "continuation_rate": 0.8
+        },
+        {
+          "cluster": "RSI 35-50 | Vol <=1.0 | OI 10+",
+          "count": 12,
+          "continuation_rate": 0.75
+        },
+        {
+          "cluster": "RSI 50-65 | Vol <=1.0 | OI 3 to 10",
+          "count": 20,
+          "continuation_rate": 0.7
+        },
+        {
+          "cluster": "RSI 50-65 | Vol 1.0-1.5 | OI 3 to 10",
+          "count": 10,
+          "continuation_rate": 0.7
+        },
+        {
+          "cluster": "RSI 50-65 | Vol <=1.0 | OI -10 to -3",
+          "count": 33,
+          "continuation_rate": 0.5758
+        },
+        {
+          "cluster": "RSI 35-50 | Vol 1.0-1.5 | OI 3 to 10",
+          "count": 16,
+          "continuation_rate": 0.5625
+        },
+        {
+          "cluster": "RSI <=35 | Vol 1.0-1.5 | OI -10 to -3",
+          "count": 9,
+          "continuation_rate": 0.5556
+        }
+      ],
+      "top_failure_clusters": [
+        {
+          "cluster": "RSI <=35 | Vol <=1.0 | OI -3 to 0",
+          "count": 46,
+          "continuation_rate": 0.1957
+        },
+        {
+          "cluster": "RSI 50-65 | Vol <=1.0 | OI 10+",
+          "count": 8,
+          "continuation_rate": 0.25
+        },
+        {
+          "cluster": "RSI <=35 | Vol 1.0-1.5 | OI 0 to 3",
+          "count": 27,
+          "continuation_rate": 0.2593
+        },
+        {
+          "cluster": "RSI 35-50 | Vol 1.0-1.5 | OI 0 to 3",
+          "count": 111,
+          "continuation_rate": 0.2703
+        },
+        {
+          "cluster": "RSI 35-50 | Vol 1.5-2.0 | OI -3 to 0",
+          "count": 11,
+          "continuation_rate": 0.2727
+        },
+        {
+          "cluster": "RSI 50-65 | Vol <=1.0 | OI -3 to 0",
+          "count": 111,
+          "continuation_rate": 0.2973
+        },
+        {
+          "cluster": "RSI 35-50 | Vol <=1.0 | OI 0 to 3",
+          "count": 192,
+          "continuation_rate": 0.3073
+        }
+      ]
+    }
+  },
+  "classification_report": {
+    "0": {
+      "precision": 0.7645327446651949,
+      "recall": 0.7639705882352941,
+      "f1-score": 0.7642515630746598,
+      "support": 1360.0
+    },
+    "1": {
+      "precision": 0.6537216828478964,
+      "recall": 0.6544276457883369,
+      "f1-score": 0.6540744738262277,
+      "support": 926.0
+    },
+    "accuracy": 0.7195975503062118,
+    "macro avg": {
+      "precision": 0.7091272137565456,
+      "recall": 0.7091991170118155,
+      "f1-score": 0.7091630184504438,
+      "support": 2286.0
+    },
+    "weighted avg": {
+      "precision": 0.7196460240865342,
+      "recall": 0.7195975503062118,
+      "f1-score": 0.7196216485322066,
+      "support": 2286.0
+    }
+  },
+  "top_live_signals": [
+    {
+      "symbol": "RAVEUSDT",
+      "close_time": "2026-04-20 13:59:59.999000+00:00",
+      "close": 0.68517,
+      "candle_return_pct": -4.229624142124326,
+      "body_pct": 4.229624142124326,
+      "volume_ratio_6h": 0.8253548867484928,
+      "rsi_1h": 28.425528313521866,
+      "oi_change_pct_1h": -4.617870568970684,
+      "continuation_probability": 0.9470893144607544,
+      "continuation_prediction": 1
+    },
+    {
+      "symbol": "SKYAIUSDT",
+      "close_time": "2026-04-20 13:59:59.999000+00:00",
+      "close": 0.17244,
+      "candle_return_pct": 6.523350630096377,
+      "body_pct": 6.523350630096377,
+      "volume_ratio_6h": 0.08055799150457985,
+      "rsi_1h": 47.32075042188813,
+      "oi_change_pct_1h": 31.770861766345583,
+      "continuation_probability": 0.9095329642295837,
+      "continuation_prediction": 1
+    },
+    {
+      "symbol": "MUSDT",
+      "close_time": "2026-04-20 13:59:59.999000+00:00",
+      "close": 3.50376,
+      "candle_return_pct": 2.204966498160828,
+      "body_pct": 2.204966498160828,
+      "volume_ratio_6h": 0.9780455925031569,
+      "rsi_1h": 50.896344628996374,
+      "oi_change_pct_1h": -1.4448961652565595,
+      "continuation_probability": 0.8945709466934204,
+      "continuation_prediction": 1
+    },
+    {
+      "symbol": "TRADOORUSDT",
+      "close_time": "2026-04-20 13:59:59.999000+00:00",
+      "close": 7.58,
+      "candle_return_pct": -0.05274261603374947,
+      "body_pct": 0.05274261603374947,
+      "volume_ratio_6h": 0.887883626042221,
+      "rsi_1h": 63.83149638456899,
+      "oi_change_pct_1h": -3.2008482579234165,
+      "continuation_probability": 0.8518080115318298,
+      "continuation_prediction": 1
+    },
+    {
+      "symbol": "RIVERUSDT",
+      "close_time": "2026-04-20 13:59:59.999000+00:00",
+      "close": 5.043,
+      "candle_return_pct": 1.1837881219903725,
+      "body_pct": 1.1837881219903725,
+      "volume_ratio_6h": 0.5730940066150549,
+      "rsi_1h": 40.20048283239146,
+      "oi_change_pct_1h": 1.5692452404531654,
+      "continuation_probability": 0.8462186455726624,
+      "continuation_prediction": 1
+    },
+    {
+      "symbol": "ZEREBROUSDT",
+      "close_time": "2026-04-20 13:59:59.999000+00:00",
+      "close": 0.0142,
+      "candle_return_pct": 0.07047216349542867,
+      "body_pct": 0.07047216349542867,
+      "volume_ratio_6h": 0.9571575482593028,
+      "rsi_1h": 62.48637067311263,
+      "oi_change_pct_1h": -17.50452873910241,
+      "continuation_probability": 0.7701936960220337,
+      "continuation_prediction": 1
+    },
+    {
+      "symbol": "VELVETUSDT",
+      "close_time": "2026-04-20 14:59:59.999000+00:00",
+      "close": 0.07267,
+      "candle_return_pct": -0.967566094303628,
+      "body_pct": 0.967566094303628,
+      "volume_ratio_6h": 0.7936116087723355,
+      "rsi_1h": 42.52447647238633,
+      "oi_change_pct_1h": -9.700865993450691,
+      "continuation_probability": 0.7678147554397583,
+      "continuation_prediction": 1
+    },
+    {
+      "symbol": "AGTUSDT",
+      "close_time": "2026-04-20 13:59:59.999000+00:00",
+      "close": 0.014406,
+      "candle_return_pct": 0.5303558967201651,
+      "body_pct": 0.5303558967201651,
+      "volume_ratio_6h": 0.9160266873094534,
+      "rsi_1h": 40.813850478728924,
+      "oi_change_pct_1h": 1.8045593373009705,
+      "continuation_probability": 0.7536609768867493,
+      "continuation_prediction": 1
+    },
+    {
+      "symbol": "ORDIUSDT",
+      "close_time": "2026-04-20 13:59:59.999000+00:00",
+      "close": 4.5731,
+      "candle_return_pct": 0.19938650306748704,
+      "body_pct": 0.19938650306748704,
+      "volume_ratio_6h": 0.556798902202275,
+      "rsi_1h": 50.255768916405394,
+      "oi_change_pct_1h": -0.09247873899974612,
+      "continuation_probability": 0.7106199264526367,
+      "continuation_prediction": 1
+    },
+    {
+      "symbol": "BEATUSDT",
+      "close_time": "2026-04-20 13:59:59.999000+00:00",
+      "close": 0.4647,
+      "candle_return_pct": 0.1530205392357569,
+      "body_pct": 0.1530205392357569,
+      "volume_ratio_6h": 1.0401656245285233,
+      "rsi_1h": 46.564205068387395,
+      "oi_change_pct_1h": -0.5047390763375459,
+      "continuation_probability": 0.6792541146278381,
+      "continuation_prediction": 1
+    }
+  ]
+}
