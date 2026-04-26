@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-04-26T14:12:10.426627+00:00",
+  "generated_at": "2026-04-26T14:34:52.728492+00:00",
   "dashboard_name": "Coinglass Scanner",
   "source_mode": "github_actions",
   "scanner": {
-    "timestamp": "2026-04-26T11:58:52.180560+00:00",
+    "timestamp": "2026-04-26T14:32:36.785702+00:00",
     "status": "healthy",
     "headline": "Market scan completed successfully.",
-    "symbols_attempted": 65,
-    "symbols_scanned": 65,
+    "symbols_attempted": 64,
+    "symbols_scanned": 64,
     "symbols_failed": 0,
     "min_volume_24h_usdt": 5000000.0,
     "provider_priority": [
@@ -23,11 +23,11 @@
     }
   },
   "main_model": {
-    "status": "missing",
+    "status": "not_enough_data",
     "timestamp": null,
     "accuracy": null,
     "roc_auc": null,
-    "samples": null
+    "samples": 67
   },
   "hourly_model": {
     "status": "trained",
