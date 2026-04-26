@@ -1,6 +1,6 @@
 # Coinglass ML Scanner
 
-This project scans Bybit USDT perpetual futures, builds ML features from RSI, price, volume, funding, and open interest, and trains two separate XGBoost models:
+This project scans USDT perpetual futures with Binance as the primary provider and Bybit as the fallback, builds ML features from RSI, price, volume, funding, and open interest, and trains two separate XGBoost models:
 
 - `Main scanner model`: snapshot-based market scanner that scores current symbols using multi-timeframe RSI, OI, funding, and price features.
 - `Hourly candle-pattern model`: 1h continuation model focused on large candle bodies, volume expansion, RSI persistence, and open-interest behavior.
@@ -21,7 +21,7 @@ The project is now structured to run on GitHub Actions instead of relying on one
 ```text
 jobs.py                      CLI entrypoint for one-shot jobs
 scanner.py                   Local loop runner
-src/collector.py             Bybit market and OI collection
+src/collector.py             Binance/Bybit market collection with fallback + proxy support
 src/features.py              Main scanner feature engineering and time-based labels
 src/trainer.py               Main scanner model training and live prediction
 src/hourly_trainer.py        1h candle-pattern dataset, labels, training, reports
@@ -88,10 +88,15 @@ Generated runtime data is not kept on the code branch. Instead, workflows restor
 
 through a separate `runtime-data` branch.
 
-If Bybit blocks GitHub-hosted runners, set the repository variable
-`SCANNER_RUNNER` to a JSON runner label array such as
-`["self-hosted","scanner"]` and run the workflows from an unblocked machine or
-VPS.
+If exchanges block GitHub-hosted runners, you can still run on a self-hosted
+runner by setting the repository variable `SCANNER_RUNNER` to a JSON runner
+label array such as `["self-hosted","scanner"]`.
+
+The workflows also support an outbound proxy for market-data requests. This
+repo is configured for a single Oxylabs endpoint on `ddc.oxylabs.io:8001`, and
+expects the GitHub secrets `OXYLABS_USERNAME` and `OXYLABS_PASSWORD`. If those
+secrets are empty, the scanner will try the proxy first and then fall back to a
+direct request.
 
 ## Dashboard
 
@@ -148,6 +153,12 @@ python scanner.py
 ## Key Environment Variables
 
 ```bash
+MARKET_DATA_PROVIDERS=binance,bybit
+MARKET_PROXY_HOST=ddc.oxylabs.io
+MARKET_PROXY_PORT=8001
+MARKET_PROXY_USERNAME=...
+MARKET_PROXY_PASSWORD=...
+MARKET_PROXY_FALLBACK_DIRECT=true
 MIN_VOLUME_24H_USDT=5000000
 MAX_SYMBOLS_PER_SCAN=0
 LABEL_HORIZON_MINUTES=60
@@ -160,6 +171,6 @@ HOURLY_CONTINUATION_THRESHOLD_PCT=1.5
 
 ## Notes
 
-- The scanner uses Bybit public futures endpoints. No API key is required.
+- The scanner uses Binance USD-M public futures endpoints first, then Bybit public futures endpoints as fallback. No exchange API key is required.
 - `data/`, `logs/`, `models/`, and `reports/` are intentionally ignored on the code branch.
 - The dashboard remains useful locally, but GitHub Actions is now the primary execution path.

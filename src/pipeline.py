@@ -31,6 +31,10 @@ from src.config import (
     HOURLY_DIR,
     LABELS_DIR,
     LOGS_DIR,
+    MARKET_DATA_PROVIDERS,
+    MARKET_PROXY_HOST,
+    MARKET_PROXY_PORT,
+    MARKET_PROXY_URL,
     MIN_VOLUME_24H_USDT,
     MODELS_DIR,
     RAW_DIR,
@@ -131,6 +135,15 @@ def scan_market_once(show_progress: bool = True) -> pd.DataFrame:
         "symbols_scanned": int(len(rows)),
         "symbols_failed": int(failed),
         "min_volume_24h_usdt": MIN_VOLUME_24H_USDT,
+        "provider_priority": MARKET_DATA_PROVIDERS,
+        "proxy": {
+            "enabled": bool(MARKET_PROXY_URL),
+            "endpoint": (
+                f"{MARKET_PROXY_HOST}:{MARKET_PROXY_PORT}"
+                if MARKET_PROXY_HOST and MARKET_PROXY_PORT
+                else None
+            ),
+        },
         "request_errors": request_errors,
     }
     if not symbols:
@@ -138,7 +151,7 @@ def scan_market_once(show_progress: bool = True) -> pd.DataFrame:
         summary["headline"] = "No active symbols were available for scanning."
     elif df.empty and _has_access_block(request_errors.get("status_counts", {})):
         summary["status"] = "blocked"
-        summary["headline"] = "Bybit rejected market-data requests from the runner."
+        summary["headline"] = "Configured market-data providers rejected requests from the runner."
     elif df.empty and failed:
         summary["status"] = "degraded"
         summary["headline"] = "All symbol scans failed before producing usable rows."
@@ -222,12 +235,20 @@ def write_runtime_payload(
 
     if scanner_status == "blocked" or _has_access_block(error_counts):
         notes.append(
-            "The market-data provider is rejecting requests from this runner, so automated scans are not collecting live rows."
+            "Configured market-data providers are rejecting requests from this runner, so automated scans are not collecting live rows."
         )
     elif scanner_status == "degraded":
         notes.append("The scanner ran but did not produce usable rows for the latest cycle.")
     elif scanner_status == "healthy":
         notes.append("The scanner completed and produced live market rows for the latest cycle.")
+
+    if MARKET_DATA_PROVIDERS:
+        notes.append(f"Provider order: {' -> '.join(MARKET_DATA_PROVIDERS)}.")
+    if MARKET_PROXY_URL:
+        if MARKET_PROXY_HOST and MARKET_PROXY_PORT:
+            notes.append(f"Outbound proxy enabled via {MARKET_PROXY_HOST}:{MARKET_PROXY_PORT}.")
+        else:
+            notes.append("Outbound proxy is enabled for market-data requests.")
 
     if latest_main and latest_main.get("status") == "trained":
         notes.append("Main scanner model metrics below come from the most recent successful training snapshot.")
@@ -236,7 +257,7 @@ def write_runtime_payload(
 
     runtime_status = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "dashboard_name": "Azalyst Coinglass Scanner",
+        "dashboard_name": "Coinglass Scanner",
         "source_mode": "github_actions" if os.getenv("GITHUB_ACTIONS") == "true" else "local",
         "scanner": scan_summary,
         "main_model": {

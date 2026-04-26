@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from urllib.parse import quote
 
 
 def _env_int(name: str, default: int) -> int:
@@ -12,6 +13,43 @@ def _env_int(name: str, default: int) -> int:
 def _env_float(name: str, default: float) -> float:
     value = os.getenv(name)
     return float(value) if value not in (None, "") else default
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value in (None, ""):
+        return default
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_csv(name: str, default: str) -> list[str]:
+    raw = os.getenv(name, default)
+    values = [item.strip().lower() for item in raw.split(",")]
+    return [item for item in values if item]
+
+
+def _build_proxy_url() -> str | None:
+    explicit = os.getenv("MARKET_PROXY_URL", "").strip()
+    if explicit:
+        return explicit
+
+    host = os.getenv("MARKET_PROXY_HOST", "").strip()
+    port = os.getenv("MARKET_PROXY_PORT", "").strip()
+    if not host or not port:
+        return None
+
+    scheme = os.getenv("MARKET_PROXY_SCHEME", "http").strip() or "http"
+    username = os.getenv("MARKET_PROXY_USERNAME", "").strip()
+    password = os.getenv("MARKET_PROXY_PASSWORD", "").strip()
+
+    auth = ""
+    if username:
+        auth = quote(username, safe="")
+        if password:
+            auth += f":{quote(password, safe='')}"
+        auth += "@"
+
+    return f"{scheme}://{auth}{host}:{port}"
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -109,6 +147,25 @@ HOURLY_REPORT_TOP_N = _env_int("HOURLY_REPORT_TOP_N", 25)
 RUNTIME_DATA_BRANCH = os.getenv("RUNTIME_DATA_BRANCH", "runtime-data")
 
 
-# Bybit API (USDT Perpetual)
+# Market data providers
+SUPPORTED_MARKET_PROVIDERS = ("binance", "bybit")
+MARKET_DATA_PROVIDERS = [
+    provider
+    for provider in _env_csv("MARKET_DATA_PROVIDERS", "binance,bybit")
+    if provider in SUPPORTED_MARKET_PROVIDERS
+]
+if not MARKET_DATA_PROVIDERS:
+    MARKET_DATA_PROVIDERS = ["binance", "bybit"]
+
+
+# Optional outbound proxy
+MARKET_PROXY_URL = _build_proxy_url()
+MARKET_PROXY_FALLBACK_DIRECT = _env_bool("MARKET_PROXY_FALLBACK_DIRECT", True)
+MARKET_PROXY_HOST = os.getenv("MARKET_PROXY_HOST", "").strip()
+MARKET_PROXY_PORT = os.getenv("MARKET_PROXY_PORT", "").strip()
+
+
+# Exchange APIs (USDT perpetual futures)
+BINANCE_FAPI_BASE = "https://fapi.binance.com"
 BYBIT_BASE = "https://api.bybit.com"
 BYBIT_V5_BASE = "https://api.bybit.com/v5"

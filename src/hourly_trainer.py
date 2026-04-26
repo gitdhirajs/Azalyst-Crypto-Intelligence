@@ -104,7 +104,10 @@ def collect_hourly_market_data(
 
     frames = []
     for symbol in symbols:
-        candles = fetch_klines(symbol, "1h", limit=limit)
+        ticker = bulk_tickers.get(symbol, {})
+        provider = ticker.get("_provider")
+
+        candles = fetch_klines(symbol, "1h", limit=limit, provider=provider)
         if candles is None or candles.empty:
             continue
 
@@ -114,7 +117,7 @@ def collect_hourly_market_data(
         candles["symbol"] = symbol
         candles["rsi_1h"] = compute_rsi(candles["close"])
 
-        oi_hist = fetch_oi_history(symbol, period="1h", limit=limit)
+        oi_hist = fetch_oi_history(symbol, period="1h", limit=limit, provider=provider)
         if oi_hist is not None and not oi_hist.empty:
             oi_hist = oi_hist.rename(
                 columns={
@@ -134,9 +137,9 @@ def collect_hourly_market_data(
             candles["oi_contracts"] = np.nan
             candles["oi_value_now"] = np.nan
 
-        ticker = bulk_tickers.get(symbol, {})
         candles["current_price_change_pct_24h"] = ticker.get("price_change_pct_24h")
         candles["current_volume_24h"] = ticker.get("volume_24h")
+        candles["market_provider"] = provider
         frames.append(candles)
 
     if not frames:
