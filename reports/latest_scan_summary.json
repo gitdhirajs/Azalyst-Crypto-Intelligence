@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-04-26T23:59:51.095045+00:00",
+  "timestamp": "2026-04-27T07:58:58.902124+00:00",
   "status": "healthy",
   "headline": "Market scan completed successfully.",
-  "symbols_attempted": 58,
-  "symbols_scanned": 58,
+  "symbols_attempted": 65,
+  "symbols_scanned": 65,
   "symbols_failed": 0,
   "min_volume_24h_usdt": 5000000.0,
   "provider_priority": [
