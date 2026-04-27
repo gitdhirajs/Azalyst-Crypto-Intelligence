@@ -147,6 +147,7 @@ jobs:
       - name: Send Discord summary
         continue-on-error: true
         env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           python scripts/discord_report.py --run-url "$RUN_URL" --update-kind "hourly patterns"
