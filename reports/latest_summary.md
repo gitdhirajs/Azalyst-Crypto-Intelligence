@@ -2,9 +2,9 @@
 
 ## Hourly Candle Pattern Model
 - Status: trained
-- Accuracy: 0.7438
-- F1: 0.6393
-- ROC AUC: 0.8022
-- Samples: 11302
+- Accuracy: 0.7417
+- F1: 0.643
+- ROC AUC: 0.8037
+- Samples: 11303
 - Symbols: 68
 - Continuation window hours: 3
