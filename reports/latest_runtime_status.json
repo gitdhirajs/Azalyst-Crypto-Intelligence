@@ -1,10 +1,29 @@
 {
-  "generated_at": "2026-04-27T21:15:00.700205+00:00",
+  "generated_at": "2026-04-27T21:30:16.819617+00:00",
   "dashboard_name": "Coinglass Scanner",
   "source_mode": "github_actions",
-  "scanner": {},
+  "scanner": {
+    "timestamp": "2026-04-27T21:28:02.383816+00:00",
+    "status": "healthy",
+    "headline": "Market scan completed successfully.",
+    "symbols_attempted": 68,
+    "symbols_scanned": 68,
+    "symbols_failed": 0,
+    "min_volume_24h_usdt": 5000000.0,
+    "provider_priority": [
+      "kucoin",
+      "bitget"
+    ],
+    "request_errors": {
+      "count": 0,
+      "status_counts": {},
+      "endpoint_counts": {},
+      "provider_counts": {},
+      "examples": []
+    }
+  },
   "main_model": {
-    "status": "missing",
+    "status": "no_labeled_data",
     "timestamp": null,
     "accuracy": null,
     "roc_auc": null,
@@ -22,6 +41,7 @@
     "hourly_patterns": "7 * * * *"
   },
   "notes": [
+    "The scanner completed and produced live market rows for the latest cycle.",
     "Provider order: kucoin -> bitget.",
     "Hourly candle-pattern model metrics below come from the most recent successful training snapshot."
   ]
