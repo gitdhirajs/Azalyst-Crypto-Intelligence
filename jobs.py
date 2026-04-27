@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 
+from src.config import validate as validate_config
 from src.hourly_trainer import train_hourly_model
 from src.pipeline import (
     reset_runtime_artifacts,
@@ -18,6 +19,7 @@ from src.trainer import predict_current
 
 
 def main() -> None:
+    validate_config()
     parser = argparse.ArgumentParser(description="Run scanner and ML jobs.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 

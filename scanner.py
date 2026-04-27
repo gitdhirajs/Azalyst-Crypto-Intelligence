@@ -13,6 +13,7 @@ import sys
 import time
 import signal
 import traceback
+import threading
 import pandas as pd
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +24,7 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
 from rich import box
 
+from src.config import validate as validate_config
 from src.config import (
     SCAN_INTERVAL_SECONDS, RAW_DIR, FEATURES_DIR,
     RETRAIN_EVERY_N_SCANS, MIN_SAMPLES_TO_TRAIN,
@@ -34,13 +36,12 @@ from src.trainer import train_model, predict_current
 
 console = Console()
 SCAN_COUNT = 0
-RUNNING = True
+STOP_EVENT = threading.Event()
 
 
 def signal_handler(sig, frame):
-    global RUNNING
+    STOP_EVENT.set()
     console.print("\n[bold red]⏹  Shutting down scanner...[/]")
-    RUNNING = False
 
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -83,13 +84,13 @@ def run_scan() -> pd.DataFrame:
         task = progress.add_task("Scanning...", total=len(symbols))
 
         for batch_start in range(0, len(symbols), BATCH_SIZE):
-            if not RUNNING:
+            if STOP_EVENT.is_set():
                 break
 
             batch = symbols[batch_start:batch_start + BATCH_SIZE]
 
             for sym in batch:
-                if not RUNNING:
+                if STOP_EVENT.is_set():
                     break
 
                 # Pass preloaded ticker data to avoid redundant API calls
@@ -103,7 +104,7 @@ def run_scan() -> pd.DataFrame:
                 progress.update(task, advance=1, description=f"Scanning {sym}...")
 
             # Pause between batches to respect rate limits
-            if batch_start + BATCH_SIZE < len(symbols) and RUNNING:
+            if batch_start + BATCH_SIZE < len(symbols) and not STOP_EVENT.is_set():
                 time.sleep(BATCH_DELAY)
 
     if not rows:
@@ -270,8 +271,9 @@ def maybe_train_model():
     else:
         console.print(f"  [yellow]Training status: {status}[/]")
 
-
 def main():
+    validate_config()
+
     # Discover symbols count for startup display
     console.print("[dim]Checking Bybit for available pairs...[/]")
     startup_symbols, _ = get_active_symbols()
@@ -292,7 +294,7 @@ def main():
         border_style="blue",
     ))
 
-    while RUNNING:
+    while not STOP_EVENT.is_set():
         try:
             # 1. Discover & scan all active symbols
             scan_df = run_scan()
@@ -308,13 +310,13 @@ def main():
                 display_scan_table(scan_df)
 
             # 5. Wait for next cycle
-            if RUNNING:
+            if not STOP_EVENT.is_set():
                 console.print(
                     f"\n[dim]Next scan in {SCAN_INTERVAL_SECONDS}s... "
                     f"(Ctrl+C to stop)[/]"
                 )
                 for _ in range(SCAN_INTERVAL_SECONDS):
-                    if not RUNNING:
+                    if STOP_EVENT.is_set():
                         break
                     time.sleep(1)
 

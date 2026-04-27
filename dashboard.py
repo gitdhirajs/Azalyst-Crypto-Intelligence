@@ -11,26 +11,48 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+import logging
 from src.config import FEATURES_DIR, HOURLY_DIR, LOGS_DIR, RAW_DIR
 
+log = logging.getLogger(__name__)
 console = Console()
+
+def safe_read_csv(path, **kwargs) -> pd.DataFrame:
+    try:
+        if not path.exists():
+            log.warning("Missing CSV: %s", path)
+            return pd.DataFrame()
+        df = pd.read_csv(path, **kwargs)
+        if df.empty:
+            log.warning("Empty CSV: %s", path)
+        return df
+    except Exception as e:
+        log.exception("Failed to read %s: %s", path, e)
+        return pd.DataFrame()
 
 
 def show_data_summary() -> None:
     raw_files = sorted(RAW_DIR.glob("scans_*.csv"))
     total_rows = 0
     for file_path in raw_files:
-        total_rows += len(pd.read_csv(file_path))
+        df_raw = safe_read_csv(file_path)
+        if df_raw.empty:
+            continue
+        total_rows += len(df_raw)
 
     feat_path = FEATURES_DIR / "latest_features.csv"
     hourly_path = HOURLY_DIR / "latest_hourly_features.csv"
 
     labeled_main = 0
     labeled_hourly = 0
-    if feat_path.exists():
-        labeled_main = int(pd.read_csv(feat_path)["label"].notna().sum())
-    if hourly_path.exists():
-        labeled_hourly = int(pd.read_csv(hourly_path)["continuation_label"].notna().sum())
+    
+    df_feat = safe_read_csv(feat_path)
+    if not df_feat.empty and "label" in df_feat.columns:
+        labeled_main = int(df_feat["label"].notna().sum())
+        
+    df_hourly = safe_read_csv(hourly_path)
+    if not df_hourly.empty and "continuation_label" in df_hourly.columns:
+        labeled_hourly = int(df_hourly["continuation_label"].notna().sum())
 
     console.print(
         Panel(

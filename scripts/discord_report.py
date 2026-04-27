@@ -8,7 +8,24 @@ from typing import Any, Dict, List
 
 import requests
 
-DEFAULT_WEBHOOK_URL = "https://discord.com/api/webhooks/1497644966929760387/DVOa9Ehih3AVGW44g94-vTw-V3WpPVm5-J1M7mtxUzPk7Vow8Dx2KtM9v4e_u9_4VgY_"
+import os
+import sys
+
+DEFAULT_WEBHOOK_URL = ""  # never hardcode — read from env
+
+def get_webhook_url() -> str:
+    url = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
+    if not url:
+        if "--dry-run" in sys.argv:
+            return ""
+        raise RuntimeError(
+            "DISCORD_WEBHOOK_URL env var is not set. "
+            "Add it to GitHub Secrets and to your local .env, or pass --dry-run."
+        )
+    if not url.startswith("https://discord.com/api/webhooks/") and not url.startswith("https://discordapp.com/api/webhooks/"):
+        raise RuntimeError("DISCORD_WEBHOOK_URL is not a valid Discord webhook URL.")
+    return url
+
 DEFAULT_DASHBOARD_URL = "https://gitdhirajs.github.io/coinglass-scanner/"
 DEFAULT_REPO_URL = "https://github.com/gitdhirajs/coinglass-scanner"
 DEFAULT_PAYLOAD_PATH = Path("reports/latest_dashboard_payload.json")
@@ -313,7 +330,7 @@ def send_payload(webhook_url: str, payload: Dict[str, Any]) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Post coinglass-scanner runtime updates to Discord.")
-    parser.add_argument("--webhook-url", default=DEFAULT_WEBHOOK_URL)
+    parser.add_argument("--webhook-url", default=None)
     parser.add_argument("--dashboard-url", default=DEFAULT_DASHBOARD_URL)
     parser.add_argument("--repo-url", default=DEFAULT_REPO_URL)
     parser.add_argument("--run-url", default="")
@@ -327,6 +344,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    webhook_url = args.webhook_url or get_webhook_url()
     runtime_payload = load_json(Path(args.payload_path))
     summary_markdown = load_text(Path(args.summary_path))
     payload = build_payload(
@@ -345,7 +363,7 @@ def main() -> int:
         print(json.dumps(payload, indent=2))
         return 0
 
-    send_payload(args.webhook_url, payload)
+    send_payload(webhook_url, payload)
     print("Discord update sent.")
     return 0
 

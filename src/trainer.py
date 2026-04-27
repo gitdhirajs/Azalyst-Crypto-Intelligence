@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn import clone
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -324,8 +325,17 @@ def train_model(force: bool = False) -> dict:
     train_idx, test_idx, split_name = _time_split(clean, y)
     eval_model, metrics = _fit_and_score(X, y, train_idx, test_idx)
 
-    final_model = XGBClassifier(**MODEL_PARAMS)
-    final_model.fit(X, y, verbose=False)
+    # Train the production artifact ONLY on the training portion.
+    # Evaluation metrics already came from `eval_model` on the held-out test slice.
+    final_model = clone(eval_model)
+    final_model.fit(X.iloc[train_idx], y.iloc[train_idx], verbose=False)
+
+    # Persist eval metrics alongside the model so we can detect drift later.
+    training_metadata = {
+        "trained_on_rows": int(len(train_idx)),
+        "evaluated_on_rows": int(len(test_idx)),
+        "test_split_method": split_name,
+    }
 
     importances = dict(zip(used_cols, final_model.feature_importances_.tolist()))
     top_features = sorted(importances.items(), key=lambda item: item[1], reverse=True)[:10]
@@ -350,6 +360,7 @@ def train_model(force: bool = False) -> dict:
         "bucket_analysis": _bucket_analysis(clean),
         "symbol_generalization": _symbol_generalization(clean, X, y),
         "classification_report": metrics["classification_report"],
+        "training_metadata": training_metadata,
     }
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 import re
 import time
 from collections import Counter
@@ -241,7 +242,8 @@ def _http_get_json(
                 **details,
             )
             if attempt < 3:
-                time.sleep(0.4 * attempt)
+                backoff = min(2 ** attempt, 30) + random.uniform(0, 0.5)
+                time.sleep(backoff)
 
     if last_error is not None:
         raise last_error

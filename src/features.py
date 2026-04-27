@@ -96,8 +96,8 @@ def label_data(df: pd.DataFrame) -> pd.DataFrame:
             future_lookup.sort_values("future_scan_time"),
             left_on="target_time",
             right_on="future_scan_time",
-            direction="forward",
-            tolerance=tolerance,
+            direction="backward",
+            tolerance=pd.Timedelta(minutes=5),
         )
 
         merged = merged.sort_values("scan_time").reset_index(drop=True)

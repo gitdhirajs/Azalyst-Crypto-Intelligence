@@ -88,7 +88,7 @@ RSI_OVERSOLD = _env_int("RSI_OVERSOLD", 30)
 # Main scanner labeling
 LABEL_HORIZON_MINUTES = _env_int("LABEL_HORIZON_MINUTES", 60)
 LABEL_LOOKAHEAD_TOLERANCE_MINUTES = _env_int(
-    "LABEL_LOOKAHEAD_TOLERANCE_MINUTES", 45
+    "LABEL_LOOKAHEAD_TOLERANCE_MINUTES", 5
 )
 PRICE_RISE_THRESHOLD_PCT = _env_float("PRICE_RISE_THRESHOLD_PCT", 0.5)
 
@@ -130,3 +130,18 @@ if not MARKET_DATA_PROVIDERS:
 KUCOIN_FUTURES_BASE = "https://api-futures.kucoin.com"
 KUCOIN_UNIFIED_BASE = "https://api.kucoin.com"
 BITGET_BASE = "https://api.bitget.com"
+
+
+def validate() -> None:
+    """Call once at process start. Fail fast on bad config."""
+    errors = []
+    providers = MARKET_DATA_PROVIDERS  # already a list from _env_csv
+    if not providers:
+        errors.append("MARKET_DATA_PROVIDERS is empty — set e.g. 'bitget,kucoin'")
+    for p in providers:
+        if p.lower() not in {"bitget", "kucoin"}:
+            errors.append(f"Unknown provider: {p!r}")
+    if SCAN_INTERVAL_SECONDS <= 0:
+        errors.append("SCAN_INTERVAL_SECONDS must be > 0")
+    if errors:
+        raise RuntimeError("Invalid config:\n  - " + "\n  - ".join(errors))
