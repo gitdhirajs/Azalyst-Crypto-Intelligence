@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-04-28T00:14:19.132085+00:00",
+  "generated_at": "2026-04-28T09:14:44.240856+00:00",
   "dashboard_name": "Coinglass Scanner",
   "source_mode": "github_actions",
   "scanner": {
-    "timestamp": "2026-04-28T00:12:26.523922+00:00",
+    "timestamp": "2026-04-28T09:12:32.046598+00:00",
     "status": "healthy",
     "headline": "Market scan completed successfully.",
-    "symbols_attempted": 67,
-    "symbols_scanned": 67,
+    "symbols_attempted": 64,
+    "symbols_scanned": 64,
     "symbols_failed": 0,
     "min_volume_24h_usdt": 5000000.0,
     "provider_priority": [
