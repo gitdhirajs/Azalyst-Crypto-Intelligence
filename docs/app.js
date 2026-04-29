@@ -1,6 +1,6 @@
 const CONFIG = {
   owner: "gitdhirajs",
-  repo: "coinglass-scanner",
+  repo: "Azalyst-Crypto-Intelligence",
   runtimeRef: "runtime-data",
   refreshMs: 5 * 60 * 1000,
   bootstrapUrl: "./data/bootstrap.json",
