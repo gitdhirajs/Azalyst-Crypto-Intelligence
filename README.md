@@ -2,7 +2,7 @@
 
 A multi-engine USDT-perpetual-futures scanner for institutional-grade crypto signal generation. Runs on **only free public APIs** (KuCoin / Bitget / OKX), works on GitHub Actions free-tier, and combines a calibrated XGBoost ML model with five independent leading-indicator engines fused into Tier-A/B/C consensus signals.
 
-**Live dashboard:** https://gitdhirajs.github.io/azalyst-crypto-intelligence/
+**Live dashboard:** https://gitdhirajs.github.io/coinglass-scanner/
 **Status:** v2.1 (multi-engine, GitHub-Actions-native, zero paid dependencies)
 
 ---
@@ -104,8 +104,8 @@ Each engine emits a `SignalCard{symbol, direction, strength 0-100, reason}`. The
 
 ```bash
 # 1. Clone
-git clone https://github.com/gitdhirajsv/azalyst-crypto-intelligence.git
-cd azalyst-crypto-intelligence
+git clone https://github.com/gitdhirajs/coinglass-scanner.git
+cd coinglass-scanner
 
 # 2. Install
 pip install -r requirements.txt

@@ -9,8 +9,8 @@ from typing import Any, Dict, List
 import requests
 
 DEFAULT_WEBHOOK_URL = "https://discord.com/api/webhooks/1497644966929760387/DVOa9Ehih3AVGW44g94-vTw-V3WpPVm5-J1M7mtxUzPk7Vow8Dx2KtM9v4e_u9_4VgY_"
-DEFAULT_DASHBOARD_URL = "https://gitdhirajs.github.io/azalyst-crypto-intelligence/"
-DEFAULT_REPO_URL = "https://github.com/gitdhirajs/azalyst-crypto-intelligence"
+DEFAULT_DASHBOARD_URL = "https://gitdhirajs.github.io/coinglass-scanner/"
+DEFAULT_REPO_URL = "https://github.com/gitdhirajs/coinglass-scanner"
 DEFAULT_PAYLOAD_PATH = Path("reports/latest_dashboard_payload.json")
 DEFAULT_SUMMARY_PATH = Path("reports/latest_summary.md")
 MAX_EMBED_DESCRIPTION = 4000
