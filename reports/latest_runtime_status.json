@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-29T13:13:11.546866+00:00",
+  "generated_at": "2026-04-29T16:18:43.400633+00:00",
   "dashboard_name": "Coinglass Scanner",
   "source_mode": "github_actions",
   "scanner": {
@@ -23,7 +23,7 @@
     }
   },
   "main_model": {
-    "status": "no_labeled_data",
+    "status": "missing",
     "timestamp": null,
     "accuracy": null,
     "roc_auc": null,
@@ -31,10 +31,10 @@
   },
   "hourly_model": {
     "status": "trained",
-    "timestamp": "2026-04-29T09:25:44.051183+00:00",
-    "accuracy": 0.7373,
-    "roc_auc": 0.793,
-    "samples": 12694
+    "timestamp": "2026-04-29T16:18:42.090149+00:00",
+    "accuracy": 0.7475,
+    "roc_auc": 0.7958,
+    "samples": 12849
   },
   "workflow_schedules": {
     "main_scanner": "*/15 * * * *",
