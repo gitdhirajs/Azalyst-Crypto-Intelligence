@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-04-29T23:01:12.560132+00:00",
+  "status": "healthy",
+  "symbols_attempted": 82,
+  "symbols_scanned": 82,
+  "symbols_failed": 0,
+  "min_volume_24h_usdt": 5000000.0,
+  "request_errors": {
+    "count": 583,
+    "status_counts": {
+      "400": 92
+    },
+    "endpoint_counts": {
+      "kucoin_klines": 491,
+      "okx_oi_history": 82,
+      "https://api.bitget.com/api/v2/mix/market/candles": 10
+    },
+    "examples": [
+      {
+        "endpoint": "kucoin_klines",
+        "status_code": null,
+        "message": "6 columns passed, passed data had 7 columns",
+        "symbol": "BTCUSDT",
+        "interval": "1m"
+      },
+      {
+        "endpoint": "kucoin_klines",
+        "status_code": null,
+        "message": "6 columns passed, passed data had 7 columns",
+        "symbol": "BTCUSDT",
+        "interval": "5m"
+      },
+      {
+        "endpoint": "kucoin_klines",
+        "status_code": null,
+        "message": "6 columns passed, passed data had 7 columns",
+        "symbol": "BTCUSDT",
+        "interval": "15m"
+      },
+      {
+        "endpoint": "kucoin_klines",
+        "status_code": null,
+        "message": "6 columns passed, passed data had 7 columns",
+        "symbol": "BTCUSDT",
+        "interval": "1h"
+      },
+      {
+        "endpoint": "kucoin_klines",
+        "status_code": null,
+        "message": "6 columns passed, passed data had 7 columns",
+        "symbol": "BTCUSDT",
+        "interval": "4h"
+      },
+      {
+        "endpoint": "kucoin_klines",
+        "status_code": null,
+        "message": "6 columns passed, passed data had 7 columns",
+        "symbol": "BTCUSDT",
+        "interval": "1d"
+      },
+      {
+        "endpoint": "okx_oi_history",
+        "status_code": 400,
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=BTC-USDT-SWAP&period=5m&limit=12",
+        "symbol": "BTCUSDT",
+        "period": "5m"
+      },
+      {
+        "endpoint": "kucoin_klines",
+        "status_code": null,
+        "message": "6 columns passed, passed data had 7 columns",
+        "symbol": "ETHUSDT",
+        "interval": "1m"
+      }
+    ]
+  }
+}
