@@ -70,6 +70,11 @@ FEATURE_COLS = [
     "cg_liq_pull_up",
     "cg_liq_pull_down",
     "cg_liq_pull_ratio",
+    # NEW — Institutional Public-REST features
+    "orderbook_imb",
+    "cvd_avg",
+    "taker_buy_ratio",
+    "basis_bps",
 ]
 LABEL_COL = "label"
 
@@ -374,3 +379,35 @@ def predict_current(scan_df: pd.DataFrame) -> pd.DataFrame:
     scan_df["ml_prediction"] = model.predict(X)
     scan_df["ml_probability"] = model.predict_proba(X)[:, 1]
     return scan_df
+
+
+def incremental_train(new_features_csv: str = None) -> dict:
+    """Warm-start training on recent data using existing model."""
+    model_path = MODELS_DIR / "latest_model.joblib"
+    if not model_path.exists():
+        return train_model(force=True)
+
+    base_model = joblib.load(model_path)
+    # If it's a CalibratedClassifierCV, we need the inner base estimator for warm-start
+    if isinstance(base_model, CalibratedClassifierCV):
+        # Calibration wrapper doesn't support easy incremental fit like this,
+        # so we fallback to full train_model or skip for now.
+        return train_model(force=True)
+
+    latest = pd.read_csv(FEATURES_DIR / "latest_features.csv")
+    if "scan_time" in latest.columns:
+        latest["scan_time"] = pd.to_datetime(latest["scan_time"], utc=True)
+
+    # Filter to last 7 days for incremental boost
+    cutoff = latest["scan_time"].max() - pd.Timedelta(days=7)
+    recent = latest[latest["scan_time"] >= cutoff]
+
+    clean, X, y, used_cols, medians = _prepare_data(recent)
+    if len(y) < 50:
+        return {"status": "not_enough_recent"}
+
+    base_model.fit(X, y, xgb_model=base_model.get_booster(), verbose=False)
+
+    # Save updated model
+    joblib.dump(base_model, model_path)
+    return {"status": "updated", "samples": len(y)}

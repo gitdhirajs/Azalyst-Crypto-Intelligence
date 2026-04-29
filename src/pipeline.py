@@ -51,8 +51,8 @@ from src.signal_engines import (
     BasisEngine, FundingExtremeEngine, LiquidationProximityEngine,
     LongShortExtremeEngine, OIDeltaEngine,
 )
-from src.signal_fusion import CryptoSignalFuser
-from src.trainer import predict_current, train_model
+from src.signal_fusion import DynamicSignalFuser
+from src.trainer import predict_current, train_model, incremental_train
 
 log = logging.getLogger("azalyst.pipeline")
 
@@ -187,7 +187,8 @@ def run_multi_engine(scan_df: pd.DataFrame) -> List[Dict]:
     ls_engine = LongShortExtremeEngine(cg)
     basis_engine = BasisEngine(fetch_spot_price, fetch_perp_price)
     oi_engine = OIDeltaEngine()
-    fuser = CryptoSignalFuser()
+    fuser = DynamicSignalFuser()
+    fuser.train_weights() # Attempt to load dynamic weights from history
 
     per_symbol_cards: Dict[str, list] = {}
     ml_probs: Dict[str, float] = {}
@@ -199,10 +200,13 @@ def run_multi_engine(scan_df: pd.DataFrame) -> List[Dict]:
         row = row_match.iloc[0].to_dict()
         ml_probs[sym] = float(row.get("ml_probability") or 0.5)
 
+        # Trend Gating proxy: 24h momentum
+        trend_score = np.clip(float(row.get("price_change_pct_24h") or 0) / 10, -1, 1)
+
         base_asset = sym[:-4] if sym.endswith("USDT") else sym
         cards = []
         cards.append(liq_engine.run(base_asset, "1d"))
-        cards.append(fund_engine.run(base_asset))
+        cards.append(fund_engine.run(base_asset, trend_strength=trend_score))
         cards.append(ls_engine.run(base_asset, "1h"))
         cards.append(basis_engine.run(sym))
         cards.append(oi_engine.run(row))

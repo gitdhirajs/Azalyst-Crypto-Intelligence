@@ -422,13 +422,14 @@ function renderSignals(signals) {
 }
 
 function renderFeatures(target, report) {
-  if (!report?.top_features?.length) {
-    target.innerHTML = `<div class="empty-state">No feature importance data available.</div>`;
-    return;
-  }
+    const features = report?.top_features || report?.top_features_permutation || [];
+    if (features.length === 0) {
+      target.innerHTML = `<div class="empty-state">No feature importance data available.</div>`;
+      return;
+    }
 
-  const maxValue = Math.max(...report.top_features.map((item) => Number(item[1]) || 0), 0.0001);
-  target.innerHTML = report.top_features.slice(0, 10).map(([name, value]) => `
+  const maxValue = Math.max(...features.map((item) => Number(item[1]) || 0), 0.0001);
+  target.innerHTML = features.slice(0, 10).map(([name, value]) => `
     <div class="feature-row">
       <span>${name}</span>
       <div class="bar-rail">

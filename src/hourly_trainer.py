@@ -59,6 +59,11 @@ FEATURE_COLS = [
     "body_vs_avg_12h",
     "range_vs_avg_12h",
     "current_price_change_pct_24h",
+    # NEW — Institutional Public-REST features
+    "orderbook_imb",
+    "cvd_avg",
+    "taker_buy_ratio",
+    "basis_bps",
 ]
 LABEL_COL = "continuation_label"
 MODEL_PARAMS = {

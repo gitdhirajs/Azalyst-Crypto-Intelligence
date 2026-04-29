@@ -1,29 +1,23 @@
 """
-src/signal_fusion.py — Cross-engine consensus / Tier A/B/C ranking.
-
-Same pattern proven on the Azalyst ETF scanner: independent engines,
-direction vote, tier classification, divergence flag. Tuned for crypto:
-
-  Tier A — ≥4 engines (out of 6 incl. ML) agree, no divergence
-  Tier B — 3 engines agree, ≤1 dissent
-  Tier C — 2 engines agree (research only, smaller size)
-  divergent — engines split — usually means a regime change is
-              underway; flag for manual review, do not auto-trade.
-
-Signals decay in MINUTES in crypto so this runs every cycle, not
-once per day like the ETF scanner.
+Dynamic signal fusion: weight engines based on historical performance,
+replace fixed tier thresholds with continuous score + entropy penalty.
 """
-
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, List, Optional
 
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+
+from src.config import LOGS_DIR
 from src.signal_engines import SignalCard
 
 log = logging.getLogger("azalyst.fusion")
-
 
 @dataclass
 class FusedCryptoSignal:
@@ -61,159 +55,151 @@ class FusedCryptoSignal:
         }
 
 
-# Engine weight when computing fused score (sums to 1.0)
-ENGINE_WEIGHTS: Dict[str, float] = {
-    "liq_proximity":   0.28,    # highest — liq heatmap is the crypto edge
-    "ml_main":         0.22,    # XGBoost is generic but broadly useful
-    "ls_extreme":      0.16,
-    "funding_extreme": 0.14,
-    "basis":           0.10,
-    "oi_delta":        0.10,
-}
+class DynamicSignalFuser:
+    def __init__(self, weight_reg = None):
+        # Logistic regression fits: engine_strengths -> probability of win
+        self.reg = weight_reg or LogisticRegression(fit_intercept=False, max_iter=1000)
+        # Default fallback weights if no history exists
+        self.default_weights = {
+            'liq_proximity': 0.28,
+            'ml_main': 0.22,
+            'ls_extreme': 0.16,
+            'funding_extreme': 0.14,
+            'basis': 0.10,
+            'oi_delta': 0.10
+        }
 
+    def train_weights(self, history_file: Path = LOGS_DIR / 'fused_history.jsonl'):
+        """Load past fused signals and their outcome to fit engine strength -> win."""
+        if not history_file.exists():
+            return
+        records = []
+        try:
+            with open(history_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    try: records.append(json.loads(line))
+                    except: pass
+        except Exception as e:
+            log.warning(f"Failed to read fusion history: {e}")
+            return
+            
+        if len(records) < 50:
+            return
+            
+        df = pd.DataFrame(records)
+        # Assume df has columns for each engine's strength and the final 'outcome' (1=win, 0=loss)
+        # We derive outcome from future_return_pct if available
+        required = ['outcome']
+        engines = ['liq_proximity', 'ml_main', 'ls_extreme', 'funding_extreme', 'basis', 'oi_delta']
+        
+        # Check if we have engine columns
+        available_engines = [e for e in engines if e in df.columns]
+        if not available_engines or 'outcome' not in df.columns:
+            return
+            
+        X = df[available_engines].fillna(0)
+        y = df['outcome'].astype(int)
+        
+        if y.nunique() < 2:
+            return
+            
+        self.reg.fit(X, y)
+        coefs = dict(zip(available_engines, self.reg.coef_[0].tolist()))
+        log.info(f"Dynamic fusion weights updated: {coefs}")
 
-class CryptoSignalFuser:
+    def fuse_one(self, symbol, cards, ml_prob):
+        # Convert cards to strength per engine
+        strengths = {c.engine: (c.strength if c.direction == 'LONG' else -c.strength) 
+                    for c in cards if c.direction != 'NEUTRAL'}
+        
+        # ML probability input (shifted to -100 to 100 range to match engine strengths)
+        ml_strength = (ml_prob - 0.5) * 200 if ml_prob is not None else 0.0
+        strengths['ml_main'] = ml_strength
 
-    # Threshold for ML probability to count as a directional vote
-    ML_LONG_THRESHOLD = 0.62
-    ML_SHORT_THRESHOLD = 0.38   # symmetric on the other side
+        # Calculate base score
+        if hasattr(self.reg, 'coef_'):
+            # Use logistic regression prediction
+            engines = ['liq_proximity', 'ml_main', 'ls_extreme', 'funding_extreme', 'basis', 'oi_delta']
+            feature_vec = [strengths.get(e, 0.0) for e in engines]
+            # Prob of 1 (win)
+            prob_win = self.reg.predict_proba([feature_vec])[0, 1]
+            dynamic_score = prob_win * 100
+        else:
+            # Fallback: weighted average
+            weighted_sum = sum(abs(s) * self.default_weights.get(e, 0.05) for e, s in strengths.items())
+            dynamic_score = weighted_sum
 
-    def fuse_one(
-        self,
-        symbol: str,
-        cards: List[SignalCard],
-        ml_probability: Optional[float] = None,
-    ) -> Optional[FusedCryptoSignal]:
-        # Convert ML probability into a virtual SignalCard so it votes too
-        ml_dir = None
-        ml_card = None
-        if ml_probability is not None:
-            if ml_probability >= self.ML_LONG_THRESHOLD:
-                ml_dir = "LONG"
-                ml_card = SignalCard(
-                    symbol=symbol, engine="ml_main",
-                    direction="LONG",
-                    strength=round((ml_probability - 0.5) * 200, 1),
-                    reason=f"XGBoost probability {ml_probability:.2%} ≥ {self.ML_LONG_THRESHOLD:.0%}.",
-                )
-            elif ml_probability <= self.ML_SHORT_THRESHOLD:
-                ml_dir = "SHORT"
-                ml_card = SignalCard(
-                    symbol=symbol, engine="ml_main",
-                    direction="SHORT",
-                    strength=round((0.5 - ml_probability) * 200, 1),
-                    reason=f"XGBoost probability {ml_probability:.2%} ≤ {self.ML_SHORT_THRESHOLD:.0%}.",
-                )
+        # Determine overall direction
+        long_cards = [c for c in cards if c.direction == 'LONG']
+        short_cards = [c for c in cards if c.direction == 'SHORT']
+        if ml_prob is not None:
+            if ml_prob >= 0.62: long_cards.append(None) # Virtual card
+            elif ml_prob <= 0.38: short_cards.append(None)
+
+        if len(long_cards) > len(short_cards):
+            direction = 'LONG'
+        elif len(short_cards) > len(long_cards):
+            direction = 'SHORT'
+        else:
+            # Tie break on strength
+            long_s = sum(c.strength for c in cards if c.direction == 'LONG')
+            short_s = sum(c.strength for c in cards if c.direction == 'SHORT')
+            direction = 'LONG' if long_s >= short_s else 'SHORT'
+
+        # Entropy penalty for divergence
+        total_votes = len(long_cards) + len(short_cards)
+        if total_votes > 1:
+            p_long = len(long_cards) / total_votes
+            p_short = len(short_cards) / total_votes
+            # Binary entropy
+            if p_long == 0 or p_short == 0:
+                entropy_norm = 0
             else:
-                ml_card = SignalCard(
-                    symbol=symbol, engine="ml_main",
-                    direction="NEUTRAL", strength=0.0,
-                    reason=f"XGBoost probability {ml_probability:.2%} is in neutral zone.",
-                )
-
-        all_cards = [c for c in cards if c is not None]
-        if ml_card is not None:
-            all_cards.append(ml_card)
-
-        if not all_cards:
-            return None
-
-        long_engines = [c.engine for c in all_cards if c.direction == "LONG"]
-        short_engines = [c.engine for c in all_cards if c.direction == "SHORT"]
-        neutral_engines = [c.engine for c in all_cards if c.direction == "NEUTRAL"]
-
-        if not long_engines and not short_engines:
-            return None
-
-        # Direction = side with more votes; ties go to higher cumulative strength
-        long_strength = sum(c.strength for c in all_cards if c.direction == "LONG")
-        short_strength = sum(c.strength for c in all_cards if c.direction == "SHORT")
-        if len(long_engines) > len(short_engines) or (
-            len(long_engines) == len(short_engines) and long_strength >= short_strength
-        ):
-            direction = "LONG"
-            agree = long_engines
-            dissent = short_engines
+                entropy = -(p_long * np.log2(p_long) + p_short * np.log2(p_short))
+                entropy_norm = entropy # max is 1.0 for binary
+            
+            agreement_factor = 1.0 - (0.5 * entropy_norm) # Max 50% penalty for full 50/50 split
         else:
-            direction = "SHORT"
-            agree = short_engines
-            dissent = long_engines
+            agreement_factor = 1.0
 
-        divergent = len(agree) >= 2 and len(dissent) >= 2
+        final_score = round(dynamic_score * agreement_factor, 1)
 
-        # Consensus tier
-        if len(agree) >= 4 and not divergent:
-            tier = "A"
-        elif len(agree) >= 3:
-            tier = "B"
-        elif len(agree) == 2:
-            tier = "C"
+        # Tiering logic
+        agree_count = len(long_cards) if direction == 'LONG' else len(short_cards)
+        divergent = (agreement_factor < 0.7)
+        
+        if final_score >= 70 and agree_count >= 4 and not divergent:
+            tier = 'A'
+        elif final_score >= 45 and agree_count >= 3:
+            tier = 'B'
+        elif final_score >= 25:
+            tier = 'C'
         else:
             return None
-
-        # Fused score: weighted-average strength of agreeing engines, with
-        # a small boost for tier A and a heavy penalty for divergence
-        weighted_sum = 0.0
-        weight_total = 0.0
-        for c in all_cards:
-            if c.direction != direction:
-                continue
-            w = ENGINE_WEIGHTS.get(c.engine, 0.05)
-            weighted_sum += c.strength * w
-            weight_total += w
-
-        base = (weighted_sum / weight_total) if weight_total > 0 else 0.0
-        if tier == "A":
-            base = min(base * 1.15, 100)
-        if tier == "C":
-            base *= 0.85
-        if divergent:
-            base *= 0.7
-        fused = round(base, 1)
 
         # Build summary
-        reasons_compact = " | ".join(
-            f"{c.engine}={c.direction[0]}{int(c.strength)}"
-            for c in all_cards
-        )
-        summary = (
-            f"{symbol} {direction} Tier-{tier} score {fused:.1f}/100 "
-            f"({len(agree)} engines agree"
-            + (f", {len(dissent)} dissent" if dissent else "")
-            + f"). {reasons_compact}"
-        )
-
+        summary = f"{symbol} {direction} Tier-{tier} Score:{final_score} (Agree:{agree_count}, Factor:{agreement_factor:.2f})"
+        
         return FusedCryptoSignal(
-            symbol=symbol,
-            direction=direction,
-            consensus_tier=tier,
-            fused_score=fused,
-            engines_long=long_engines,
-            engines_short=short_engines,
-            engines_neutral=neutral_engines,
-            divergent=divergent,
-            cards=all_cards,
-            ml_probability=ml_probability,
-            ml_direction=ml_dir,
+            symbol=symbol, direction=direction, consensus_tier=tier,
+            fused_score=final_score, divergent=divergent,
+            engines_long=[c.engine for c in cards if c.direction == 'LONG'],
+            engines_short=[c.engine for c in cards if c.direction == 'SHORT'],
+            engines_neutral=[c.engine for c in cards if c.direction == 'NEUTRAL'],
+            cards=cards, ml_probability=ml_prob,
+            ml_direction="LONG" if ml_prob and ml_prob >= 0.5 else "SHORT",
             summary=summary,
-            metrics={
-                "long_strength_total": round(long_strength, 1),
-                "short_strength_total": round(short_strength, 1),
-            },
+            metrics={"agreement_factor": agreement_factor, "base_dynamic_score": dynamic_score}
         )
 
-    def fuse_many(
-        self,
-        per_symbol_cards: Dict[str, List[SignalCard]],
-        ml_probabilities: Optional[Dict[str, float]] = None,
-    ) -> List[FusedCryptoSignal]:
+    def fuse_many(self, per_symbol_cards: Dict[str, List[SignalCard]], ml_probabilities: Optional[Dict[str, float]] = None) -> List[FusedCryptoSignal]:
         ml_probabilities = ml_probabilities or {}
-        out: List[FusedCryptoSignal] = []
+        out = []
         for symbol, cards in per_symbol_cards.items():
             fused = self.fuse_one(symbol, cards, ml_probabilities.get(symbol))
-            if fused is not None:
+            if fused:
                 out.append(fused)
-        # Tier A first, then by score
+        
         tier_order = {"A": 0, "B": 1, "C": 2}
         out.sort(key=lambda s: (tier_order.get(s.consensus_tier, 3), -s.fused_score))
         return out

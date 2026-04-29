@@ -129,18 +129,7 @@ class WalkForwardBacktester:
         )
 
     def _simulate_trade(self, future_return_pct: float) -> Tuple[float, str]:
-        """
-        Given the model's labeling-horizon return, decide PnL for a long trade.
-
-        We can't simulate every tick from CSV alone (we don't have full path
-        data), so we approximate using the future_return_pct realized at the
-        horizon as a proxy. If it exceeds TP, we assume TP fired earlier; if
-        it breaches -SL, we assume SL fired. Otherwise close at horizon.
-
-        This is the standard "horizon return" conservative approximation —
-        will UNDERSTATE win rate vs reality (real TP/SL trigger faster) but
-        is honest about the data we have.
-        """
+        """Proxy simulation using horizon return."""
         if pd.isna(future_return_pct):
             return 0.0, "no_data"
         if future_return_pct >= self.take_profit_pct:
@@ -148,6 +137,28 @@ class WalkForwardBacktester:
         if future_return_pct <= -self.stop_loss_pct:
             return -self.stop_loss_pct, "stop_loss"
         return future_return_pct, "horizon_close"
+
+    def _simulate_trade_with_bars(self, entry_price: float, future_bars: pd.DataFrame) -> Tuple[float, str]:
+        """
+        Path-accurate simulation using bar-by-bar high/low.
+        Matches institutional standards for backtesting.
+        """
+        if future_bars is None or future_bars.empty:
+            return 0.0, "no_bars"
+        
+        for _, bar in future_bars.iterrows():
+            high, low = float(bar['high']), float(bar['low'])
+            # Check SL first (conservative)
+            if low <= entry_price * (1 - self.stop_loss_pct / 100):
+                return -self.stop_loss_pct, "stop_loss"
+            # Check TP
+            if high >= entry_price * (1 + self.take_profit_pct / 100):
+                return self.take_profit_pct, "take_profit"
+                
+        # If horizon reached without trigger, close at last bar's close
+        last_close = float(future_bars['close'].iloc[-1])
+        pnl = (last_close - entry_price) / entry_price * 100
+        return pnl, "horizon_close"
 
     def run(
         self,

@@ -61,6 +61,52 @@ OKX_BAR = {"1m": "1m", "5m": "5m", "15m": "15m", "1h": "1H", "4h": "4H", "1d": "
 
 REQUEST_ERRORS: list = []
 
+class CircuitBreaker:
+    def __init__(self, fail_threshold=5, cooldown=120):
+        self.fails = {}
+        self.threshold = fail_threshold
+        self.cooldown = cooldown
+
+    def is_open(self, endpoint):
+        if endpoint not in self.fails: return False
+        count, last = self.fails[endpoint]
+        if count >= self.threshold and time.time() - last < self.cooldown:
+            return True
+        if time.time() - last > self.cooldown:
+            self.fails[endpoint] = (0, time.time())
+        return False
+
+    def record_fail(self, endpoint):
+        count, _ = self.fails.get(endpoint, (0, 0))
+        self.fails[endpoint] = (count + 1, time.time())
+
+cb_breaker = CircuitBreaker()
+
+def _request_with_cb(url, params=None, timeout=10, cache_key=None, cache_ttl=0):
+    """HTTP GET wrapper with Circuit Breaker and basic TTL caching."""
+    if cb_breaker.is_open(url):
+        return None
+    
+    # TTL Cache
+    if cache_key:
+        if not hasattr(_request_with_cb, "_cache"): _request_with_cb._cache = {}
+        cached = _request_with_cb._cache.get(cache_key)
+        if cached and time.time() - cached["ts"] < cache_ttl:
+            return cached["data"]
+
+    try:
+        r = SESSION.get(url, params=params, timeout=timeout)
+        r.raise_for_status()
+        data = r.json()
+        
+        if cache_key and data:
+            _request_with_cb._cache[cache_key] = {"ts": time.time(), "data": data}
+        return data
+    except Exception as e:
+        cb_breaker.record_fail(url)
+        _record_request_error(url, e)
+        return None
+
 
 def _extract_status_code(error):
     response = getattr(error, "response", None)
@@ -320,15 +366,15 @@ def _fetch_klines_kucoin(symbol: str, interval: str, limit: int) -> Optional[pd.
     end_ms = int(time.time() * 1000)
     start_ms = end_ms - granularity * 60 * 1000 * (limit + 5)
     try:
-        r = SESSION.get(f"{KUCOIN_FUTURES}/api/v1/kline/query", params={
+        data = _request_with_cb(f"{KUCOIN_FUTURES}/api/v1/kline/query", params={
             "symbol": kc_sym, "granularity": granularity,
             "from": start_ms, "to": end_ms,
-        }, timeout=10)
-        r.raise_for_status()
-        data = r.json().get("data") or []
-        if not data:
+        }, timeout=10, cache_key=f"klines_ku_{kc_sym}_{granularity}", cache_ttl=30)
+        
+        rows = data.get("data") if data else []
+        if not rows:
             return None
-        df = pd.DataFrame(data, columns=["open_time", "open", "high", "low", "close", "volume"])
+        df = pd.DataFrame(rows, columns=["open_time", "open", "high", "low", "close", "volume"])
         for c in ("open", "high", "low", "close", "volume"):
             df[c] = df[c].astype(float)
         df["open_time"] = pd.to_datetime(df["open_time"].astype("int64"), unit="ms", utc=True)
@@ -346,13 +392,12 @@ def _fetch_klines_bitget(symbol: str, interval: str, limit: int) -> Optional[pd.
     if not granularity:
         return None
     try:
-        r = SESSION.get(f"{BITGET_BASE}/api/v2/mix/market/candles", params={
+        payload = _request_with_cb(f"{BITGET_BASE}/api/v2/mix/market/candles", params={
             "symbol": symbol, "productType": "USDT-FUTURES",
             "granularity": granularity, "limit": str(min(limit, 200)),
-        }, timeout=10)
-        r.raise_for_status()
-        payload = r.json()
-        if str(payload.get("code", "")) != "00000":
+        }, timeout=10, cache_key=f"klines_bg_{symbol}_{granularity}", cache_ttl=30)
+        
+        if not payload or str(payload.get("code", "")) != "00000":
             return None
         rows = payload.get("data") or []
         if not rows:
@@ -377,11 +422,10 @@ def _fetch_klines_okx(symbol: str, interval: str, limit: int) -> Optional[pd.Dat
         return None
     inst = to_okx_inst(symbol)
     try:
-        r = SESSION.get(f"{OKX_BASE}/api/v5/market/candles",
-                        params={"instId": inst, "bar": bar, "limit": str(min(limit, 300))}, timeout=10)
-        r.raise_for_status()
-        payload = r.json()
-        if str(payload.get("code", "")) != "0":
+        payload = _request_with_cb(f"{OKX_BASE}/api/v5/market/candles",
+                        params={"instId": inst, "bar": bar, "limit": str(min(limit, 300))}, 
+                        timeout=10, cache_key=f"klines_okx_{inst}_{bar}", cache_ttl=30)
+        if not payload or str(payload.get("code", "")) != "0":
             return None
         rows = list(reversed(payload.get("data") or []))
         if not rows:

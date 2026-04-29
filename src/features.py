@@ -14,13 +14,14 @@ Diff vs v2.0:
 
 from __future__ import annotations
 
-import logging
-import os
-from typing import Dict
+import time
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
+import requests
 
+from src.exchange_fallback import fetch_perp_price, fetch_spot_price
 from src.config import (
     FEATURES_DIR, LABEL_HORIZON_MINUTES, LABEL_LOOKAHEAD_TOLERANCE_MINUTES,
     PRICE_RISE_THRESHOLD_PCT, RAW_DIR, RSI_OVERBOUGHT, RSI_OVERSOLD,
@@ -82,6 +83,68 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _fetch_orderbook_imbalance(symbol: str, client) -> Optional[Dict[str, float]]:
+    """OKX level2 snapshot depth imbalance within 2% of mid."""
+    try:
+        url = f"https://www.okx.com/api/v5/market/books?instId={symbol}-USDT-SWAP&sz=20"
+        r = client._get(url) if hasattr(client, "_get") else requests.get(url, timeout=5).json()
+        if not r or r.get("code") != "0":
+            return None
+        data = r.get("data", [{}])[0]
+        bids, asks = data.get("bids", []), data.get("asks", [])
+        if not bids or not asks:
+            return None
+        best_bid, best_ask = float(bids[0][0]), float(asks[0][0])
+        mid = (best_bid + best_ask) / 2
+        limit = mid * 0.02  # 2%
+        bid_depth = sum(float(b[1]) * float(b[0]) for b in bids if float(b[0]) >= mid - limit)
+        ask_depth = sum(float(a[1]) * float(a[0]) for a in asks if float(a[0]) <= mid + limit)
+        if ask_depth + bid_depth == 0:
+            return None
+        imb = (bid_depth - ask_depth) / (bid_depth + ask_depth)
+        return {"orderbook_imb": imb, "orderbook_bid_depth": bid_depth, "orderbook_ask_depth": ask_depth}
+    except Exception:
+        return None
+
+
+def _fetch_cvd(symbol: str, client, lookback_seconds: int = 300) -> Optional[Dict]:
+    """Cumulative Volume Delta from recent trades; returns avg delta per minute."""
+    try:
+        url = f"https://www.okx.com/api/v5/market/trades?instId={symbol}-USDT-SWAP&limit=100"
+        r = client._get(url) if hasattr(client, "_get") else requests.get(url, timeout=5).json()
+        if not r or r.get("code") != "0":
+            return None
+        trades = r.get("data", [])
+        if not trades:
+            return None
+        now = time.time() * 1000
+        cvd = 0.0
+        buy_vol = 0.0
+        sell_vol = 0.0
+        for t in trades:
+            ts = float(t.get("ts", 0))
+            if ts < now - lookback_seconds * 1000:
+                break
+            side = t.get("side", "")
+            sz = float(t.get("sz", 0))
+            if side == "buy":
+                cvd += sz
+                buy_vol += sz
+            elif side == "sell":
+                cvd -= sz
+                sell_vol += sz
+        total_vol = buy_vol + sell_vol
+        if total_vol == 0:
+            return None
+        return {
+            "cvd_avg": cvd / (lookback_seconds / 60),
+            "taker_buy_ratio": buy_vol / total_vol,
+            "trade_count": len(trades),
+        }
+    except Exception:
+        return None
+
+
 def _enrich_with_azalyst(df: pd.DataFrame) -> pd.DataFrame:
     """
     Attach cg_* features per symbol. Cached per-symbol to avoid hitting
@@ -96,6 +159,7 @@ def _enrich_with_azalyst(df: pd.DataFrame) -> pd.DataFrame:
         "cg_top_ls_ratio", "cg_global_ls_ratio", "cg_top_minus_global_ls",
         "cg_taker_buy_sell_ratio",
         "cg_liq_pull_up", "cg_liq_pull_down", "cg_liq_pull_ratio",
+        "orderbook_imb", "cvd_avg", "taker_buy_ratio", "basis_bps",
     ]:
         if col not in df.columns:
             df[col] = np.nan
@@ -156,6 +220,22 @@ def _enrich_with_azalyst(df: pd.DataFrame) -> pd.DataFrame:
                 row["cg_liq_pull_up"] = pull_up
                 row["cg_liq_pull_down"] = pull_down
                 row["cg_liq_pull_ratio"] = (pull_up / max(pull_down, 1)) if pull_down > 0 else 0.0
+
+            # Order-book depth imbalance
+            ob_data = _fetch_orderbook_imbalance(base, client)
+            if ob_data:
+                row.update(ob_data)
+
+            # Trade-flow CVD
+            cvd_data = _fetch_cvd(base, client)
+            if cvd_data:
+                row.update(cvd_data)
+
+            # Basis (perp - spot premium)
+            spot_px = fetch_spot_price(sym)
+            perp_px = fetch_perp_price(sym)
+            if spot_px and perp_px:
+                row["basis_bps"] = (perp_px - spot_px) / spot_px * 10000.0
 
             cache[sym] = row
 

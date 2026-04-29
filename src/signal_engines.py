@@ -144,12 +144,13 @@ class LiquidationProximityEngine:
             direction=direction, strength=round(strength, 1),
             reason=reason,
             metrics={
-                "last_price": ref,
-                "pull_up": pull_up,
-                "pull_down": pull_down,
                 "ratio": ratio,
             },
         )
+
+    def _get_cluster_momentum(self, symbol, timeframe='1d', hours_back=6):
+        """Placeholder for historical cluster comparison (requires history in DerivedDataClient)."""
+        return 0.0
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -172,7 +173,7 @@ class FundingExtremeEngine:
     def __init__(self, client: AzalystClient):
         self.client = client
 
-    def run(self, symbol: str = "BTC") -> Optional[SignalCard]:
+    def run(self, symbol: str = "BTC", trend_strength: float = 0.0) -> Optional[SignalCard]:
         if not self.client.enabled:
             return None
         snap = self.client.funding_aggregated(symbol)
@@ -194,13 +195,20 @@ class FundingExtremeEngine:
                 f"OI-weighted funding {oiw_bps:.1f}bps — longs overcrowded; "
                 f"contrarian short setup. Spread {spread:.1f}bps."
             )
-        elif oiw_bps <= self.SQUEEZE_BPS:
-            direction = "LONG"
-            strength = min(40 + abs(oiw_bps - self.SQUEEZE_BPS) * 4, 85)
-            reason = (
-                f"OI-weighted funding {oiw_bps:.1f}bps — shorts paying longs; "
-                f"squeeze setup. Spread {spread:.1f}bps."
-            )
+                reason = (
+                    f"OI-weighted funding {oiw_bps:.1f}bps — shorts paying longs; "
+                    f"squeeze setup. Spread {spread:.1f}bps."
+                )
+
+        # Trend Gating: Don't fade strong trends
+        if direction == 'SHORT' and trend_strength > 0.5:
+            direction = 'NEUTRAL'
+            strength = 0.0
+            reason += " [GATED] Bullish trend too strong to fade funding."
+        elif direction == 'LONG' and trend_strength < -0.5:
+            direction = 'NEUTRAL'
+            strength = 0.0
+            reason += " [GATED] Bearish trend too strong to fade funding."
 
         # Cross-exchange dispersion adds confidence
         if spread >= self.SPREAD_TRIGGER_BPS and direction != "NEUTRAL":
