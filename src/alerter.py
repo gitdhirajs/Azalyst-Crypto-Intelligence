@@ -106,7 +106,7 @@ def _build_discord_embed(signal: FusedCryptoSignal) -> Dict:
         ),
         "color": color,
         "fields": fields,
-        "footer": {"text": "Azalyst Crypto Scanner v2 — multi-engine consensus"},
+        "footer": {"text": "Azalyst Crypto Intelligence v2 — multi-engine consensus"},
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return embed

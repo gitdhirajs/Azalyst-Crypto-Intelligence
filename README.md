@@ -1,8 +1,8 @@
-# Azalyst Crypto Scanner
+# Azalyst Crypto Intelligence
 
 A multi-engine USDT-perpetual-futures scanner for institutional-grade crypto signal generation. Runs on **only free public APIs** (KuCoin / Bitget / OKX), works on GitHub Actions free-tier, and combines a calibrated XGBoost ML model with five independent leading-indicator engines fused into Tier-A/B/C consensus signals.
 
-**Live dashboard:** https://gitdhirajs.github.io/azalyst-crypto-scanner/
+**Live dashboard:** https://gitdhirajs.github.io/azalyst-crypto-intelligence/
 **Status:** v2.1 (multi-engine, GitHub-Actions-native, zero paid dependencies)
 
 ---
@@ -104,8 +104,8 @@ Each engine emits a `SignalCard{symbol, direction, strength 0-100, reason}`. The
 
 ```bash
 # 1. Clone
-git clone https://github.com/gitdhirajsv/azalyst-crypto-scanner.git
-cd azalyst-crypto-scanner
+git clone https://github.com/gitdhirajsv/azalyst-crypto-intelligence.git
+cd azalyst-crypto-intelligence
 
 # 2. Install
 pip install -r requirements.txt
@@ -137,7 +137,7 @@ python jobs.py scheduled --show-progress
 ## Repo structure
 
 ```
-azalyst-crypto-scanner/
+azalyst-crypto-intelligence/
 ├── jobs.py                      ← CLI entrypoint
 ├── scanner.py                   ← Local infinite-loop runner
 ├── dashboard.py                 ← Local CLI dashboard (data summary + history)

@@ -1,6 +1,6 @@
 # Crypto Futures Scanner v2.1 — Final Plan (GitHub-Actions-Compatible, $0/mo)
 
-**Repo:** `gitdhirajsv/azalyst-crypto-scanner` → **suggested rename:** `azalyst-crypto-futures-scanner`
+**Repo:** `gitdhirajsv/azalyst-crypto-intelligence` → **suggested rename:** `azalyst-crypto-futures-scanner`
 **Primary data sources:** KuCoin Futures, Bitget Futures, OKX SWAP — **all GitHub-Actions-friendly**
 **Cost:** $0/mo, no API keys required
 
@@ -217,7 +217,7 @@ There is no `COINGLASS_API_KEY` anywhere. There is no `BINANCE_API_KEY`. The onl
 ## Deployment steps
 
 ```bash
-cd /path/to/azalyst-crypto-scanner
+cd /path/to/azalyst-crypto-intelligence
 
 # 1. Drop in the 9 src/ files + jobs.py + requirements.txt
 #    Delete src/azalyst_collector.py if it still exists
@@ -264,7 +264,7 @@ Tests run against synthetic data because the sandbox can't reach exchange APIs, 
 
 ## Repo rename — recommendation
 
-`azalyst-crypto-scanner` was misleading from day one. The honest options:
+`azalyst-crypto-intelligence` was misleading from day one. The honest options:
 
 1. **`azalyst-crypto-futures-scanner`** — matches your fund branding, no false promises
 2. **`crypto-perp-edge-scanner`** — generic but clear

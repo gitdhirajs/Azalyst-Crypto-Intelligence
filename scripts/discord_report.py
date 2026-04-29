@@ -9,8 +9,8 @@ from typing import Any, Dict, List
 import requests
 
 DEFAULT_WEBHOOK_URL = "https://discord.com/api/webhooks/1497644966929760387/DVOa9Ehih3AVGW44g94-vTw-V3WpPVm5-J1M7mtxUzPk7Vow8Dx2KtM9v4e_u9_4VgY_"
-DEFAULT_DASHBOARD_URL = "https://gitdhirajs.github.io/azalyst-crypto-scanner/"
-DEFAULT_REPO_URL = "https://github.com/gitdhirajs/azalyst-crypto-scanner"
+DEFAULT_DASHBOARD_URL = "https://gitdhirajs.github.io/azalyst-crypto-intelligence/"
+DEFAULT_REPO_URL = "https://github.com/gitdhirajs/azalyst-crypto-intelligence"
 DEFAULT_PAYLOAD_PATH = Path("reports/latest_dashboard_payload.json")
 DEFAULT_SUMMARY_PATH = Path("reports/latest_summary.md")
 MAX_EMBED_DESCRIPTION = 4000
@@ -270,10 +270,10 @@ def build_payload(
     links = [f"[Dashboard]({dashboard_url})", f"[Repo]({repo_url})"]
     if run_url:
         links.append(f"[Workflow Run]({run_url})")
-    content = f"Azalyst Crypto Scanner | {display_kind} | " + " | ".join(links)
+    content = f"Azalyst Crypto Intelligence | {display_kind} | " + " | ".join(links)
 
     return {
-        "username": "Azalyst Crypto Scanner",
+        "username": "Azalyst Crypto Intelligence",
         "allowed_mentions": {"parse": []},
         "content": content,
         "embeds": [
@@ -312,7 +312,7 @@ def send_payload(webhook_url: str, payload: Dict[str, Any]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Post azalyst-crypto-scanner runtime updates to Discord.")
+    parser = argparse.ArgumentParser(description="Post azalyst-crypto-intelligence runtime updates to Discord.")
     parser.add_argument("--webhook-url", default=DEFAULT_WEBHOOK_URL)
     parser.add_argument("--dashboard-url", default=DEFAULT_DASHBOARD_URL)
     parser.add_argument("--repo-url", default=DEFAULT_REPO_URL)

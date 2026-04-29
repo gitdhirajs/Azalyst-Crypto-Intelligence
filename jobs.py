@@ -23,7 +23,7 @@ def _print(obj):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Azalyst Crypto Scanner v2.1")
+    parser = argparse.ArgumentParser(description="Azalyst Crypto Intelligence v2.1")
     sub = parser.add_subparsers(dest="command", required=True)
 
     # ── Existing commands ────────────────────────────────────────────────

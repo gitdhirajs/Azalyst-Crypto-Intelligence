@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════╗
-║  AZALYST CRYPTO SCANNER v2.1                                 ║
+║  AZALYST CRYPTO INTELLIGENCE v2.1                                 ║
 ║  Full-Market RSI × OI × Price Action ML Trainer              ║
 ║                                                              ║
 ║  Dynamically scans KuCoin, Bitget, and OKX USDT perps,       ║
@@ -278,7 +278,7 @@ def main():
     n_syms = len(startup_symbols)
 
     console.print(Panel(
-        f"[bold white]AZALYST CRYPTO SCANNER v2.1[/]\n"
+        f"[bold white]AZALYST CRYPTO INTELLIGENCE v2.1[/]\n"
         f"[dim]Full-Market RSI × OI × Price Action ML[/]\n\n"
         f"Mode: [bold green]DYNAMIC[/] — scans KuCoin/Bitget/OKX USDT perps\n"
         f"Active pairs found: [bold cyan]{n_syms}[/]\n"

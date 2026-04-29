@@ -335,7 +335,7 @@ def write_summary_markdown(
                 "| " + " | ".join(["---"] * len(headers)) + " |"] + \
                ["| " + " | ".join(row) + " |" for row in rows]
 
-    lines = ["# Azalyst Crypto Scanner v2.1 Summary", ""]
+    lines = ["# Azalyst Crypto Intelligence v2.1 Summary", ""]
 
     if main_report and main_report.get("status") == "trained":
         lines += [
