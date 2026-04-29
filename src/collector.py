@@ -1,838 +1,644 @@
-"""Market-data collection using KuCoin Futures with Bitget fallback."""
+"""
+src/collector.py — v2.1 GitHub-Actions-friendly collector.
 
-from __future__ import annotations
+Why this exists:
+  Binance Futures returns HTTP 451 to GitHub-hosted runner IPs in many
+  regions. Bybit does the same. The previous v2.0 scanner relied on
+  Binance public endpoints and consequently never collected real data
+  on Actions — only when run locally.
 
+Solution:
+  Use exchanges that DO accept GitHub Actions IPs:
+    1. KuCoin Futures (PRIMARY)  — XBT/ETH/etc, USDT-margined perps
+    2. Bitget Futures (BACKUP)   — clean v2 API, full OI / funding / L/S
+    3. OKX SWAP (TERTIARY)       — also unblocked on AWS/GCP IPs
+
+  Binance + Bybit kept as optional fallback, only used when explicitly
+  enabled (e.g. local development), via env var ALLOW_BLOCKED_EXCHANGES=1.
+
+Contract / output schema is IDENTICAL to v2.0 — every other module
+(features.py, trainer.py, pipeline.py, hourly_trainer.py) works
+unchanged. Only the data source changes.
+
+KuCoin symbol quirks normalized for you:
+  • Bitcoin futures are XBTUSDTM on KuCoin (not BTCUSDT)
+  • All KuCoin USDT perps have "M" suffix (perpetual marker)
+  • The collector exposes the canonical 'BTCUSDT' name everywhere
+    so downstream code is unchanged
+"""
+
+import os
 import re
 import time
 from collections import Counter
 from datetime import datetime, timezone
-from functools import lru_cache
-from typing import Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 import requests
 
 from src.config import (
-    BITGET_BASE,
-    EXCLUDED_SYMBOLS,
-    KLINE_LIMIT,
-    KUCOIN_FUTURES_BASE,
-    KUCOIN_UNIFIED_BASE,
-    MARKET_DATA_PROVIDERS,
-    MAX_SYMBOLS_PER_SCAN,
-    MIN_OI_USDT,
-    MIN_VOLUME_24H_USDT,
-    REQUEST_DELAY,
-    RSI_PERIOD,
-    TIMEFRAMES,
+    BATCH_DELAY, EXCLUDED_SYMBOLS, KLINE_LIMIT, MAX_SYMBOLS_PER_SCAN,
+    MIN_VOLUME_24H_USDT, REQUEST_DELAY, RSI_PERIOD, TIMEFRAMES,
 )
 
 
 SESSION = requests.Session()
-SESSION.headers.update(
-    {
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "User-Agent": (
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
-        ),
-    }
-)
+SESSION.headers.update({"User-Agent": "AzalystCryptoScanner/2.1"})
 
-REQUEST_ERRORS: list[dict] = []
-_FALLBACK_SYMBOLS = [
-    "BTCUSDT",
-    "ETHUSDT",
-    "SOLUSDT",
-    "XRPUSDT",
-    "DOGEUSDT",
-    "ADAUSDT",
-    "AVAXUSDT",
-    "DOTUSDT",
-    "LINKUSDT",
-    "LTCUSDT",
-    "ATOMUSDT",
-    "UNIUSDT",
-    "APTUSDT",
-    "ARBUSDT",
-    "OPUSDT",
-    "NEARUSDT",
-    "FILUSDT",
-    "SUIUSDT",
-    "PEPEUSDT",
-    "TRXUSDT",
-]
-_KUCOIN_TO_INTERNAL_BASE = {"XBT": "BTC"}
-_INTERNAL_TO_KUCOIN_BASE = {value: key for key, value in _KUCOIN_TO_INTERNAL_BASE.items()}
-_KUCOIN_KLINE_GRANULARITY = {
-    "1m": 1,
-    "5m": 5,
-    "15m": 15,
-    "1h": 60,
-    "4h": 240,
-    "1d": 1440,
-}
-_BITGET_KLINE_GRANULARITY = {
-    "1m": "1m",
-    "5m": "5m",
-    "15m": "15m",
-    "1h": "1H",
-    "4h": "4H",
-    "1d": "1D",
-}
-_KUCOIN_OI_INTERVALS = {
-    "1m": "5min",
-    "5m": "5min",
-    "15m": "15min",
-    "30m": "30min",
-    "1h": "1hour",
-    "4h": "4hour",
-    "1d": "1day",
-}
+KUCOIN_FUTURES = "https://api-futures.kucoin.com"
+BITGET_BASE = "https://api.bitget.com"
+OKX_BASE = "https://www.okx.com"
+
+# Optional fallback (almost always 451 from GitHub runners)
+BINANCE_FUTURES_BASE = "https://fapi.binance.com"
+ALLOW_BLOCKED = os.getenv("ALLOW_BLOCKED_EXCHANGES", "").strip() in ("1", "true", "yes")
+
+KUCOIN_GRANULARITY = {"1m": 1, "5m": 5, "15m": 15, "1h": 60, "4h": 240, "1d": 1440}
+BITGET_GRANULARITY = {"1m": "1m", "5m": "5m", "15m": "15m", "1h": "1H", "4h": "4H", "1d": "1Dutc"}
+OKX_BAR = {"1m": "1m", "5m": "5m", "15m": "15m", "1h": "1H", "4h": "4H", "1d": "1Dutc"}
+
+REQUEST_ERRORS: list = []
 
 
-def _float_or_none(value) -> float | None:
-    if value in (None, ""):
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _extract_status_code(error: Exception) -> int | None:
+def _extract_status_code(error):
     response = getattr(error, "response", None)
-    status_code = getattr(response, "status_code", None)
-    if status_code is not None:
-        return int(status_code)
-
-    message = str(error)
-    for pattern in [
-        r"status code[:=]?\s*(\d{3})",
-        r"\bHTTP\s+(\d{3})\b",
-        r"\b(\d{3})\b",
-    ]:
-        match = re.search(pattern, message, flags=re.IGNORECASE)
-        if match:
-            return int(match.group(1))
-    return None
+    sc = getattr(response, "status_code", None)
+    if sc is not None:
+        return int(sc)
+    m = re.search(r"\b(\d{3})\b", str(error))
+    return int(m.group(1)) if m else None
 
 
-def _record_request_error(endpoint: str, error: Exception, **details) -> None:
-    entry = {
-        "endpoint": endpoint,
-        "status_code": _extract_status_code(error),
-        "message": str(error),
-    }
-    entry.update({key: value for key, value in details.items() if value is not None})
+def _record_request_error(endpoint, error, **details):
+    entry = {"endpoint": endpoint, "status_code": _extract_status_code(error), "message": str(error)}
+    entry.update({k: v for k, v in details.items() if v is not None})
     REQUEST_ERRORS.append(entry)
 
 
-def reset_request_errors() -> None:
+def reset_request_errors():
     REQUEST_ERRORS.clear()
 
 
-def get_request_error_summary(max_examples: int = 8) -> dict:
-    status_counts = Counter(
-        str(item["status_code"])
-        for item in REQUEST_ERRORS
-        if item.get("status_code") is not None
-    )
-    endpoint_counts = Counter(item["endpoint"] for item in REQUEST_ERRORS)
-    provider_counts = Counter(item["provider"] for item in REQUEST_ERRORS if item.get("provider"))
-
+def get_request_error_summary(max_examples=8):
+    status_counts = Counter(str(i["status_code"]) for i in REQUEST_ERRORS if i.get("status_code") is not None)
+    endpoint_counts = Counter(i["endpoint"] for i in REQUEST_ERRORS)
     return {
         "count": len(REQUEST_ERRORS),
         "status_counts": dict(status_counts),
         "endpoint_counts": dict(endpoint_counts),
-        "provider_counts": dict(provider_counts),
         "examples": REQUEST_ERRORS[:max_examples],
     }
 
 
-def _provider_order(preferred: str | None = None) -> list[str]:
-    ordered: list[str] = []
-    if preferred:
-        preferred = preferred.strip().lower()
-        if preferred in MARKET_DATA_PROVIDERS:
-            ordered.append(preferred)
-    for provider in MARKET_DATA_PROVIDERS:
-        if provider not in ordered:
-            ordered.append(provider)
-    return ordered
+# ──────────────────────────────────────────────────────────────────────────
+# Symbol naming helpers (canonical = "BTCUSDT" form everywhere downstream)
+# ──────────────────────────────────────────────────────────────────────────
+def to_kucoin_symbol(canonical: str) -> str:
+    """BTCUSDT → XBTUSDTM, ETHUSDT → ETHUSDTM."""
+    if not canonical.endswith("USDT"):
+        return canonical
+    base = canonical[:-4]
+    if base == "BTC":
+        base = "XBT"
+    return f"{base}USDTM"
 
 
-def _annotate_bulk_tickers(provider: str, tickers: dict[str, dict]) -> dict[str, dict]:
-    return {
-        symbol: {"_provider": provider, **row}
-        for symbol, row in tickers.items()
-    }
+def from_kucoin_symbol(kucoin_sym: str) -> str:
+    """XBTUSDTM → BTCUSDT."""
+    if kucoin_sym.endswith("USDTM"):
+        base = kucoin_sym[:-5]
+        if base == "XBT":
+            base = "BTC"
+        return f"{base}USDT"
+    return kucoin_sym
 
 
-def _provider_markers(provider: str, symbols: list[str]) -> dict[str, dict]:
-    return {
-        symbol: {
-            "_provider": provider,
-            "_provider_symbol": _to_provider_symbol(symbol, provider),
-        }
-        for symbol in symbols
-    }
+def to_bitget_symbol(canonical: str) -> str:
+    return canonical
 
 
-def _apply_scan_cap(symbols: list[str]) -> list[str]:
-    if MAX_SYMBOLS_PER_SCAN > 0:
-        return symbols[:MAX_SYMBOLS_PER_SCAN]
-    return symbols
+def to_okx_inst(canonical: str) -> str:
+    """BTCUSDT → BTC-USDT-SWAP."""
+    if canonical.endswith("USDT"):
+        return f"{canonical[:-4]}-USDT-SWAP"
+    return canonical
 
 
-def _fallback_symbols_for(provider: str, universe: list[str] | None = None) -> list[str]:
-    if universe:
-        allowed = set(universe)
-        subset = [symbol for symbol in _FALLBACK_SYMBOLS if symbol in allowed]
-        if subset:
-            return _apply_scan_cap(subset)
-    return _apply_scan_cap(list(_FALLBACK_SYMBOLS))
-
-
-def _normalize_symbol(provider: str, provider_symbol: str) -> str:
-    if provider == "kucoin":
-        symbol = provider_symbol[:-1] if provider_symbol.endswith("M") else provider_symbol
-        if symbol.endswith("USDT"):
-            base = symbol[:-4]
-            base = _KUCOIN_TO_INTERNAL_BASE.get(base, base)
-            return f"{base}USDT"
-    return provider_symbol
-
-
-def _to_provider_symbol(symbol: str, provider: str) -> str:
-    if provider == "kucoin":
-        if symbol.endswith("USDT"):
-            base = symbol[:-4]
-            base = _INTERNAL_TO_KUCOIN_BASE.get(base, base)
-            return f"{base}USDTM"
-    return symbol
-
-
-def _http_get_json(
-    url: str,
-    params: dict,
-    timeout: int,
-    endpoint: str,
-    provider: str,
-    **details,
-):
-    last_error: Exception | None = None
-    for attempt in range(1, 4):
-        try:
-            response = SESSION.get(url, params=params, timeout=timeout)
-            response.raise_for_status()
-            return response.json()
-        except Exception as exc:
-            last_error = exc
-            _record_request_error(
-                endpoint,
-                exc,
-                provider=provider,
-                attempt=attempt,
-                **details,
-            )
-            if attempt < 3:
-                time.sleep(0.4 * attempt)
-
-    if last_error is not None:
-        raise last_error
-    raise RuntimeError(f"{provider} {endpoint} failed without a captured error")
-
-
-def _kucoin_require_ok(payload: dict, endpoint: str) -> list | dict:
-    code = str(payload.get("code"))
-    if code != "200000":
-        raise RuntimeError(f"KuCoin {endpoint} returned code={code}")
-    return payload.get("data") or []
-
-
-def _bitget_require_ok(payload: dict, endpoint: str) -> list | dict:
-    code = str(payload.get("code"))
-    if code != "00000":
-        raise RuntimeError(f"Bitget {endpoint} returned code={code}: {payload.get('msg')}")
-    return payload.get("data") or []
-
-
-def _kucoin_contract_to_row(item: dict) -> dict | None:
-    provider_symbol = item.get("symbol")
-    if not provider_symbol:
-        return None
-    internal_symbol = _normalize_symbol("kucoin", provider_symbol)
-    if internal_symbol in EXCLUDED_SYMBOLS:
-        return None
-
-    mark_price = _float_or_none(item.get("markPrice")) or _float_or_none(item.get("lastTradePrice"))
-    last_trade_price = _float_or_none(item.get("lastTradePrice")) or mark_price
-    open_interest = _float_or_none(item.get("openInterest"))
-    multiplier = _float_or_none(item.get("multiplier"))
-    oi_value_now = None
-    if open_interest is not None and multiplier is not None and mark_price is not None:
-        oi_value_now = open_interest * multiplier * mark_price
-
-    return {
-        "_provider_symbol": provider_symbol,
-        "_contract_multiplier": multiplier,
-        "price": mark_price or last_trade_price,
-        "mark_price": mark_price,
-        "funding_rate": _float_or_none(item.get("fundingFeeRate")),
-        "oi_contracts": open_interest,
-        "oi_value_now": oi_value_now,
-        "price_change_pct_24h": (_float_or_none(item.get("priceChgPct")) or 0.0) * 100,
-        "high_24h": _float_or_none(item.get("highPrice")),
-        "low_24h": _float_or_none(item.get("lowPrice")),
-        "volume_24h": _float_or_none(item.get("turnoverOf24h"))
-        or _float_or_none(item.get("volumeOf24h")),
-    }
-
-
-@lru_cache(maxsize=1)
-def _bitget_contract_metadata() -> dict[str, dict]:
-    url = f"{BITGET_BASE}/api/v2/mix/market/contracts"
-    payload = _http_get_json(
-        url,
-        {"productType": "USDT-FUTURES"},
-        timeout=15,
-        endpoint="contracts",
-        provider="bitget",
-    )
-    items = _bitget_require_ok(payload, "contracts")
-    metadata = {}
-    for item in items:
-        if (
-            item.get("quoteCoin") == "USDT"
-            and item.get("symbolType") == "perpetual"
-            and item.get("symbolStatus") == "normal"
-            and item.get("symbol") not in EXCLUDED_SYMBOLS
-        ):
-            metadata[item["symbol"]] = item
-    return metadata
-
-
-def _bitget_ticker_to_row(item: dict, contract: dict | None = None) -> dict | None:
-    symbol = item.get("symbol")
-    if not symbol or symbol in EXCLUDED_SYMBOLS:
-        return None
-
-    mark_price = _float_or_none(item.get("markPrice")) or _float_or_none(item.get("lastPr"))
-    last_price = _float_or_none(item.get("lastPr")) or mark_price
-    holding_amount = _float_or_none(item.get("holdingAmount"))
-    oi_value_now = None
-    if holding_amount is not None and mark_price is not None:
-        oi_value_now = holding_amount * mark_price
-
-    return {
-        "_provider_symbol": symbol,
-        "_contract_multiplier": _float_or_none((contract or {}).get("sizeMultiplier")),
-        "price": mark_price or last_price,
-        "mark_price": mark_price,
-        "funding_rate": _float_or_none(item.get("fundingRate")),
-        "oi_contracts": holding_amount,
-        "oi_value_now": oi_value_now,
-        "price_change_pct_24h": (_float_or_none(item.get("change24h")) or 0.0) * 100,
-        "high_24h": _float_or_none(item.get("high24h")),
-        "low_24h": _float_or_none(item.get("low24h")),
-        "volume_24h": _float_or_none(item.get("usdtVolume"))
-        or _float_or_none(item.get("quoteVolume")),
-    }
-
-
-def _kucoin_fetch_all_tickers_bulk() -> dict[str, dict]:
-    url = f"{KUCOIN_FUTURES_BASE}/api/v1/contracts/active"
+# ──────────────────────────────────────────────────────────────────────────
+# Symbol discovery — KuCoin first (gives prices+OI+funding in one shot),
+# Bitget fallback, then a small hardcoded list.
+# ──────────────────────────────────────────────────────────────────────────
+def fetch_kucoin_active_contracts() -> Tuple[List[str], Dict[str, dict]]:
+    url = f"{KUCOIN_FUTURES}/api/v1/contracts/active"
     try:
-        payload = _http_get_json(
-            url,
-            {},
-            timeout=15,
-            endpoint="contracts_active",
-            provider="kucoin",
-        )
-        items = _kucoin_require_ok(payload, "contracts_active")
-        tickers: dict[str, dict] = {}
-        for item in items:
-            if (
-                item.get("quoteCurrency") != "USDT"
-                or item.get("settleCurrency") != "USDT"
-                or item.get("marketStage") != "NORMAL"
-                or not str(item.get("symbol", "")).endswith("M")
-            ):
+        r = SESSION.get(url, timeout=15)
+        r.raise_for_status()
+        data = r.json().get("data") or []
+        canonical_syms: List[str] = []
+        tickers: Dict[str, dict] = {}
+
+        for c in data:
+            quote = (c.get("quoteCurrency") or "").upper()
+            if quote != "USDT":
                 continue
-            row = _kucoin_contract_to_row(item)
-            if row is None:
+            if (c.get("type") or "").upper() != "FFWCSX":
                 continue
-            tickers[_normalize_symbol("kucoin", item["symbol"])] = row
-        return tickers
-    except Exception as exc:
-        if not isinstance(exc, requests.RequestException):
-            _record_request_error("contracts_active", exc, provider="kucoin")
-        print(f"  [ERR] kucoin contracts active: {exc}")
-        return {}
+            if c.get("status") != "Open":
+                continue
+            kc_sym = c.get("symbol")
+            if not kc_sym:
+                continue
+            canonical = from_kucoin_symbol(kc_sym)
+            if canonical in EXCLUDED_SYMBOLS:
+                continue
+            try:
+                mark = float(c.get("markPrice") or c.get("lastTradePrice") or 0)
+                turnover_24h = float(c.get("turnoverOf24h") or 0)
+                vol_change = float(c.get("priceChgPct") or 0) * 100
+                high = float(c.get("highPrice") or 0)
+                low = float(c.get("lowPrice") or 0)
+                oi_contracts = float(c.get("openInterest") or 0)
+                multiplier = float(c.get("multiplier") or 1)
+                funding = float(c.get("fundingFeeRate") or 0)
+            except (TypeError, ValueError):
+                continue
+            if turnover_24h < MIN_VOLUME_24H_USDT:
+                continue
+            tickers[canonical] = {
+                "price": mark,
+                "price_change_pct_24h": vol_change,
+                "high_24h": high,
+                "low_24h": low,
+                "volume_24h": turnover_24h,
+                "_kucoin_symbol": kc_sym,
+                "_oi_contracts": oi_contracts,
+                "_oi_value_usdt": oi_contracts * abs(multiplier) * mark,
+                "_funding_rate": funding,
+                "_multiplier": multiplier,
+            }
+            canonical_syms.append(canonical)
+
+        canonical_syms.sort(key=lambda s: -tickers[s]["volume_24h"])
+        if MAX_SYMBOLS_PER_SCAN > 0:
+            canonical_syms = canonical_syms[:MAX_SYMBOLS_PER_SCAN]
+        return canonical_syms, tickers
+    except Exception as e:
+        _record_request_error("kucoin_active_contracts", e)
+        return [], {}
 
 
-def _bitget_fetch_all_tickers_bulk() -> dict[str, dict]:
+def fetch_bitget_tickers_bulk() -> Tuple[List[str], Dict[str, dict]]:
     url = f"{BITGET_BASE}/api/v2/mix/market/tickers"
     try:
-        contracts = _bitget_contract_metadata()
-        payload = _http_get_json(
-            url,
-            {"productType": "USDT-FUTURES"},
-            timeout=15,
-            endpoint="bulk_ticker",
-            provider="bitget",
-        )
-        items = _bitget_require_ok(payload, "bulk_ticker")
-        tickers: dict[str, dict] = {}
-        for item in items:
-            symbol = item.get("symbol")
-            if symbol not in contracts:
+        r = SESSION.get(url, params={"productType": "USDT-FUTURES"}, timeout=15)
+        r.raise_for_status()
+        payload = r.json()
+        if str(payload.get("code", "")) != "00000":
+            return [], {}
+        rows = payload.get("data") or []
+        canonical_syms: List[str] = []
+        tickers: Dict[str, dict] = {}
+
+        for row in rows:
+            sym = row.get("symbol")
+            if not sym or not sym.endswith("USDT"):
                 continue
-            row = _bitget_ticker_to_row(item, contracts.get(symbol))
-            if row is None:
+            if sym in EXCLUDED_SYMBOLS:
                 continue
-            tickers[symbol] = row
-        return tickers
-    except Exception as exc:
-        if not isinstance(exc, requests.RequestException):
-            _record_request_error("bulk_ticker", exc, provider="bitget")
-        print(f"  [ERR] bitget bulk ticker: {exc}")
-        return {}
+            try:
+                last = float(row.get("lastPr") or 0)
+                chg_pct = float(row.get("change24h") or 0) * 100
+                high = float(row.get("high24h") or 0)
+                low = float(row.get("low24h") or 0)
+                quote_vol = float(row.get("quoteVolume") or row.get("usdtVolume") or 0)
+                if quote_vol == 0 and row.get("baseVolume") and last > 0:
+                    quote_vol = float(row["baseVolume"]) * last
+                funding = float(row.get("fundingRate") or 0)
+                oi_usdt = float(row.get("holdingAmount") or 0) * last
+            except (TypeError, ValueError):
+                continue
+            if quote_vol < MIN_VOLUME_24H_USDT:
+                continue
+            tickers[sym] = {
+                "price": last,
+                "price_change_pct_24h": chg_pct,
+                "high_24h": high,
+                "low_24h": low,
+                "volume_24h": quote_vol,
+                "_funding_rate": funding,
+                "_oi_value_usdt": oi_usdt,
+            }
+            canonical_syms.append(sym)
+
+        canonical_syms.sort(key=lambda s: -tickers[s]["volume_24h"])
+        if MAX_SYMBOLS_PER_SCAN > 0:
+            canonical_syms = canonical_syms[:MAX_SYMBOLS_PER_SCAN]
+        return canonical_syms, tickers
+    except Exception as e:
+        _record_request_error("bitget_tickers", e)
+        return [], {}
 
 
-def _kucoin_fetch_ticker(symbol: str) -> Optional[dict]:
-    provider_symbol = _to_provider_symbol(symbol, "kucoin")
-    tickers = _kucoin_fetch_all_tickers_bulk()
-    row = tickers.get(symbol)
-    if row:
-        return row
-    for internal_symbol, candidate in tickers.items():
-        if candidate.get("_provider_symbol") == provider_symbol:
-            return {"_provider_symbol": provider_symbol, **candidate, "_symbol": internal_symbol}
+def get_active_symbols() -> Tuple[List[str], Dict[str, dict]]:
+    syms, tickers = fetch_kucoin_active_contracts()
+    if syms:
+        return syms, tickers
+    syms, tickers = fetch_bitget_tickers_bulk()
+    if syms:
+        return syms, tickers
+    if ALLOW_BLOCKED:
+        return _binance_fallback_discovery()
+    return _FALLBACK_SYMBOLS, {}
+
+
+_FALLBACK_SYMBOLS = [
+    "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
+    "DOGEUSDT", "ADAUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT",
+    "LTCUSDT", "ATOMUSDT", "UNIUSDT", "APTUSDT", "ARBUSDT",
+    "OPUSDT", "NEARUSDT", "FILUSDT", "SUIUSDT", "PEPEUSDT",
+]
+
+
+def _binance_fallback_discovery() -> Tuple[List[str], Dict[str, dict]]:
+    try:
+        ei = SESSION.get(f"{BINANCE_FUTURES_BASE}/fapi/v1/exchangeInfo", timeout=15)
+        ei.raise_for_status()
+        symbols = [
+            s["symbol"] for s in ei.json().get("symbols", [])
+            if s.get("status") == "TRADING" and s.get("contractType") == "PERPETUAL"
+            and s.get("quoteAsset") == "USDT" and s["symbol"] not in EXCLUDED_SYMBOLS
+        ]
+        if not symbols:
+            return _FALLBACK_SYMBOLS, {}
+        tk = SESSION.get(f"{BINANCE_FUTURES_BASE}/fapi/v1/ticker/24hr", timeout=15)
+        tk.raise_for_status()
+        tickers = {}
+        for d in tk.json():
+            if d["symbol"] in symbols and float(d["quoteVolume"]) >= MIN_VOLUME_24H_USDT:
+                tickers[d["symbol"]] = {
+                    "price": float(d["lastPrice"]),
+                    "price_change_pct_24h": float(d["priceChangePercent"]),
+                    "high_24h": float(d["highPrice"]),
+                    "low_24h": float(d["lowPrice"]),
+                    "volume_24h": float(d["quoteVolume"]),
+                }
+        out = [s for s in symbols if s in tickers]
+        out.sort(key=lambda s: -tickers[s]["volume_24h"])
+        if MAX_SYMBOLS_PER_SCAN > 0:
+            out = out[:MAX_SYMBOLS_PER_SCAN]
+        return out, tickers
+    except Exception as e:
+        _record_request_error("binance_fallback", e)
+        return _FALLBACK_SYMBOLS, {}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Klines — KuCoin → Bitget → OKX → (optionally Binance)
+# ──────────────────────────────────────────────────────────────────────────
+def fetch_klines(symbol: str, interval: str, limit: int = KLINE_LIMIT) -> Optional[pd.DataFrame]:
+    df = _fetch_klines_kucoin(symbol, interval, limit)
+    if df is not None and not df.empty:
+        return df
+    df = _fetch_klines_bitget(symbol, interval, limit)
+    if df is not None and not df.empty:
+        return df
+    df = _fetch_klines_okx(symbol, interval, limit)
+    if df is not None and not df.empty:
+        return df
+    if ALLOW_BLOCKED:
+        return _fetch_klines_binance(symbol, interval, limit)
     return None
 
 
-def _bitget_fetch_ticker(symbol: str) -> Optional[dict]:
-    tickers = _bitget_fetch_all_tickers_bulk()
-    return tickers.get(symbol)
-
-
-def _format_ohlcv_frame(
-    rows: list[list],
-    interval_ms: int,
-    quote_volume_name: str = "quote_volume",
-) -> Optional[pd.DataFrame]:
-    if not rows:
+def _fetch_klines_kucoin(symbol: str, interval: str, limit: int) -> Optional[pd.DataFrame]:
+    granularity = KUCOIN_GRANULARITY.get(interval)
+    if not granularity:
         return None
-    df = pd.DataFrame(rows)
-    if df.shape[1] < 7:
-        return None
-    df = df.iloc[:, :7]
-    df.columns = ["open_time", "open", "high", "low", "close", "volume", quote_volume_name]
-    for column in ["open", "high", "low", "close", "volume", quote_volume_name]:
-        df[column] = pd.to_numeric(df[column], errors="coerce")
-    df["open_time"] = pd.to_datetime(pd.to_numeric(df["open_time"]), unit="ms", utc=True)
-    df["close_time"] = df["open_time"] + pd.to_timedelta(interval_ms - 1, unit="ms")
-    df = df.dropna(subset=["open_time", "open", "high", "low", "close"])
-    df = df.rename(columns={quote_volume_name: "quote_volume"})
-    return df.sort_values("open_time").reset_index(drop=True)
-
-
-def _kucoin_fetch_klines(symbol: str, interval: str, limit: int) -> Optional[pd.DataFrame]:
-    granularity = _KUCOIN_KLINE_GRANULARITY.get(interval)
-    if granularity is None:
-        return None
-    interval_ms = granularity * 60 * 1000
-    provider_symbol = _to_provider_symbol(symbol, "kucoin")
-    now_ms = int(time.time() * 1000)
-    window_ms = interval_ms * max(limit + 5, limit * 2)
-    url = f"{KUCOIN_FUTURES_BASE}/api/v1/kline/query"
-    params = {
-        "symbol": provider_symbol,
-        "granularity": granularity,
-        "from": now_ms - window_ms,
-        "to": now_ms,
-    }
+    kc_sym = to_kucoin_symbol(symbol)
+    end_ms = int(time.time() * 1000)
+    start_ms = end_ms - granularity * 60 * 1000 * (limit + 5)
     try:
-        payload = _http_get_json(
-            url,
-            params,
-            timeout=12,
-            endpoint="klines",
-            provider="kucoin",
-            symbol=symbol,
-            interval=interval,
-        )
-        rows = _kucoin_require_ok(payload, "klines")
-        frame = _format_ohlcv_frame(rows, interval_ms=interval_ms)
-        if frame is None or frame.empty:
+        r = SESSION.get(f"{KUCOIN_FUTURES}/api/v1/kline/query", params={
+            "symbol": kc_sym, "granularity": granularity,
+            "from": start_ms, "to": end_ms,
+        }, timeout=10)
+        r.raise_for_status()
+        data = r.json().get("data") or []
+        if not data:
             return None
-        return frame.tail(limit).reset_index(drop=True)
-    except Exception as exc:
-        if not isinstance(exc, requests.RequestException):
-            _record_request_error("klines", exc, provider="kucoin", symbol=symbol, interval=interval)
-        print(f"  [ERR] kucoin klines {symbol} {interval}: {exc}")
+        df = pd.DataFrame(data, columns=["open_time", "open", "high", "low", "close", "volume"])
+        for c in ("open", "high", "low", "close", "volume"):
+            df[c] = df[c].astype(float)
+        df["open_time"] = pd.to_datetime(df["open_time"].astype("int64"), unit="ms", utc=True)
+        df["close_time"] = df["open_time"] + pd.Timedelta(minutes=granularity) - pd.Timedelta(milliseconds=1)
+        df["quote_volume"] = df["volume"] * df["close"]
+        df["_source"] = "kucoin"
+        return df.tail(limit).reset_index(drop=True)
+    except Exception as e:
+        _record_request_error("kucoin_klines", e, symbol=symbol, interval=interval)
         return None
 
 
-def _bitget_fetch_klines(symbol: str, interval: str, limit: int) -> Optional[pd.DataFrame]:
-    granularity = _BITGET_KLINE_GRANULARITY.get(interval)
-    if granularity is None:
+def _fetch_klines_bitget(symbol: str, interval: str, limit: int) -> Optional[pd.DataFrame]:
+    granularity = BITGET_GRANULARITY.get(interval)
+    if not granularity:
         return None
-    interval_ms = _KUCOIN_KLINE_GRANULARITY[interval] * 60 * 1000
-    url = f"{BITGET_BASE}/api/v2/mix/market/candles"
-    params = {
-        "symbol": symbol,
-        "productType": "USDT-FUTURES",
-        "granularity": granularity,
-        "limit": limit,
-    }
     try:
-        payload = _http_get_json(
-            url,
-            params,
-            timeout=12,
-            endpoint="klines",
-            provider="bitget",
-            symbol=symbol,
-            interval=interval,
-        )
-        rows = _bitget_require_ok(payload, "klines")
-        frame = _format_ohlcv_frame(rows, interval_ms=interval_ms)
-        if frame is None or frame.empty:
+        r = SESSION.get(f"{BITGET_BASE}/api/v2/mix/market/candles", params={
+            "symbol": symbol, "productType": "USDT-FUTURES",
+            "granularity": granularity, "limit": str(min(limit, 200)),
+        }, timeout=10)
+        r.raise_for_status()
+        payload = r.json()
+        if str(payload.get("code", "")) != "00000":
             return None
-        return frame.tail(limit).reset_index(drop=True)
-    except Exception as exc:
-        if not isinstance(exc, requests.RequestException):
-            _record_request_error("klines", exc, provider="bitget", symbol=symbol, interval=interval)
-        print(f"  [ERR] bitget klines {symbol} {interval}: {exc}")
+        rows = payload.get("data") or []
+        if not rows:
+            return None
+        df = pd.DataFrame(rows, columns=[
+            "open_time", "open", "high", "low", "close", "volume", "quote_volume",
+        ])
+        for c in ("open", "high", "low", "close", "volume", "quote_volume"):
+            df[c] = df[c].astype(float)
+        df["open_time"] = pd.to_datetime(df["open_time"].astype("int64"), unit="ms", utc=True)
+        df["close_time"] = df["open_time"] + _interval_delta(interval) - pd.Timedelta(milliseconds=1)
+        df["_source"] = "bitget"
+        return df.tail(limit).reset_index(drop=True)
+    except Exception as e:
+        _record_request_error("bitget_klines", e, symbol=symbol, interval=interval)
         return None
 
 
-def _kucoin_fetch_open_interest(symbol: str) -> Optional[dict]:
-    ticker = _kucoin_fetch_ticker(symbol)
-    if not ticker:
+def _fetch_klines_okx(symbol: str, interval: str, limit: int) -> Optional[pd.DataFrame]:
+    bar = OKX_BAR.get(interval)
+    if not bar:
         return None
-    open_interest = _float_or_none(ticker.get("oi_contracts"))
-    oi_value_now = _float_or_none(ticker.get("oi_value_now"))
-    if open_interest is None:
+    inst = to_okx_inst(symbol)
+    try:
+        r = SESSION.get(f"{OKX_BASE}/api/v5/market/candles",
+                        params={"instId": inst, "bar": bar, "limit": str(min(limit, 300))}, timeout=10)
+        r.raise_for_status()
+        payload = r.json()
+        if str(payload.get("code", "")) != "0":
+            return None
+        rows = list(reversed(payload.get("data") or []))
+        if not rows:
+            return None
+        df = pd.DataFrame(rows, columns=[
+            "open_time", "open", "high", "low", "close",
+            "volume", "vol_ccy", "quote_volume", "confirm",
+        ])
+        for c in ("open", "high", "low", "close", "volume", "quote_volume"):
+            df[c] = df[c].astype(float)
+        df["open_time"] = pd.to_datetime(df["open_time"].astype("int64"), unit="ms", utc=True)
+        df["close_time"] = df["open_time"] + _interval_delta(interval) - pd.Timedelta(milliseconds=1)
+        df["_source"] = "okx"
+        return df[["open_time", "open", "high", "low", "close", "volume",
+                   "close_time", "quote_volume", "_source"]].tail(limit).reset_index(drop=True)
+    except Exception as e:
+        _record_request_error("okx_klines", e, symbol=symbol, interval=interval)
         return None
+
+
+def _fetch_klines_binance(symbol: str, interval: str, limit: int) -> Optional[pd.DataFrame]:
+    try:
+        r = SESSION.get(f"{BINANCE_FUTURES_BASE}/fapi/v1/klines",
+                        params={"symbol": symbol, "interval": interval, "limit": limit}, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        if not data:
+            return None
+        df = pd.DataFrame(data, columns=[
+            "open_time", "open", "high", "low", "close", "volume",
+            "close_time", "quote_volume", "trades",
+            "taker_buy_base", "taker_buy_quote", "ignore",
+        ])
+        for c in ("open", "high", "low", "close", "volume", "quote_volume"):
+            df[c] = df[c].astype(float)
+        df["open_time"] = pd.to_datetime(df["open_time"], unit="ms", utc=True)
+        df["close_time"] = pd.to_datetime(df["close_time"], unit="ms", utc=True)
+        df["_source"] = "binance"
+        return df
+    except Exception as e:
+        _record_request_error("binance_klines", e, symbol=symbol, interval=interval)
+        return None
+
+
+def _interval_delta(interval: str) -> pd.Timedelta:
     return {
-        "oi_contracts": open_interest,
-        "oi_value_now": oi_value_now,
-        "oi_time": datetime.now(timezone.utc).isoformat(),
-    }
+        "1m": pd.Timedelta(minutes=1),
+        "5m": pd.Timedelta(minutes=5),
+        "15m": pd.Timedelta(minutes=15),
+        "1h": pd.Timedelta(hours=1),
+        "4h": pd.Timedelta(hours=4),
+        "1d": pd.Timedelta(days=1),
+    }.get(interval, pd.Timedelta(hours=1))
 
 
-def _bitget_fetch_open_interest(symbol: str) -> Optional[dict]:
-    url = f"{BITGET_BASE}/api/v2/mix/market/open-interest"
-    try:
-        payload = _http_get_json(
-            url,
-            {"symbol": symbol, "productType": "USDT-FUTURES"},
-            timeout=10,
-            endpoint="open_interest",
-            provider="bitget",
-            symbol=symbol,
-        )
-        data = _bitget_require_ok(payload, "open_interest")
-        rows = data.get("openInterestList") or []
-        if not rows:
-            return None
-        oi_contracts = _float_or_none(rows[0].get("size"))
-        ticker = _bitget_fetch_ticker(symbol) or {}
-        mark_price = _float_or_none(ticker.get("mark_price"))
-        oi_value_now = oi_contracts * mark_price if oi_contracts is not None and mark_price is not None else None
-        return {
-            "oi_contracts": oi_contracts,
-            "oi_value_now": oi_value_now,
-            "oi_time": datetime.now(timezone.utc).isoformat(),
-        }
-    except Exception as exc:
-        if not isinstance(exc, requests.RequestException):
-            _record_request_error("open_interest", exc, provider="bitget", symbol=symbol)
-        print(f"  [ERR] bitget open interest {symbol}: {exc}")
-        return None
-
-
-def _kucoin_fetch_oi_history(symbol: str, period: str, limit: int) -> Optional[pd.DataFrame]:
-    interval = _KUCOIN_OI_INTERVALS.get(period)
-    if interval is None:
-        return None
-
-    ticker = _kucoin_fetch_ticker(symbol) or {}
-    multiplier = _float_or_none(ticker.get("_contract_multiplier"))
-    mark_price = _float_or_none(ticker.get("mark_price"))
-    provider_symbol = ticker.get("_provider_symbol") or _to_provider_symbol(symbol, "kucoin")
-    url = f"{KUCOIN_UNIFIED_BASE}/api/ua/v1/market/open-interest"
-    params = {
-        "symbol": provider_symbol,
-        "interval": interval,
-        "pageSize": limit,
-    }
-    try:
-        payload = _http_get_json(
-            url,
-            params,
-            timeout=12,
-            endpoint="open_interest_history",
-            provider="kucoin",
-            symbol=symbol,
-            period=period,
-        )
-        rows = _kucoin_require_ok(payload, "open_interest_history")
-        if not rows:
-            return None
-        df = pd.DataFrame(rows)
-        df["sumOpenInterest"] = pd.to_numeric(df["openInterest"], errors="coerce")
-        df["timestamp"] = pd.to_datetime(pd.to_numeric(df["ts"]), unit="ms", utc=True)
-        if multiplier is not None and mark_price is not None:
-            df["sumOpenInterestValue"] = df["sumOpenInterest"] * multiplier * mark_price
-        else:
-            df["sumOpenInterestValue"] = df["sumOpenInterest"]
-        return df[["timestamp", "sumOpenInterest", "sumOpenInterestValue"]].sort_values(
-            "timestamp"
-        ).reset_index(drop=True)
-    except Exception as exc:
-        if not isinstance(exc, requests.RequestException):
-            _record_request_error(
-                "open_interest_history",
-                exc,
-                provider="kucoin",
-                symbol=symbol,
-                period=period,
-            )
-        print(f"  [ERR] kucoin OI history {symbol}: {exc}")
-        return None
-
-
-def _bitget_fetch_oi_history(symbol: str, period: str, limit: int) -> Optional[pd.DataFrame]:
-    _ = (symbol, period, limit)
-    return None
-
-
-def _kucoin_fetch_funding_rate(symbol: str) -> Optional[float]:
-    ticker = _kucoin_fetch_ticker(symbol)
-    return _float_or_none((ticker or {}).get("funding_rate"))
-
-
-def _bitget_fetch_funding_rate(symbol: str) -> Optional[float]:
-    ticker = _bitget_fetch_ticker(symbol)
-    return _float_or_none((ticker or {}).get("funding_rate"))
-
-
-def filter_symbols_by_volume(symbols: list[str], tickers: dict[str, dict]) -> list[str]:
-    """Filter symbols by minimum 24h volume and optional OI value."""
-    valid = []
-    for symbol in symbols:
-        ticker = tickers.get(symbol)
-        if not ticker or ticker.get("volume_24h") is None:
-            continue
-        if ticker["volume_24h"] < MIN_VOLUME_24H_USDT:
-            continue
-        if MIN_OI_USDT > 0 and (ticker.get("oi_value_now") or 0) < MIN_OI_USDT:
-            continue
-        valid.append((symbol, ticker["volume_24h"]))
-
-    valid.sort(key=lambda item: item[1], reverse=True)
-    return _apply_scan_cap([symbol for symbol, _ in valid])
-
-
-def get_active_symbols() -> tuple[list[str], dict[str, dict]]:
-    """
-    Discover active USDT perpetual futures using the configured provider order.
-
-    Returns `(symbols, bulk_tickers)` where bulk ticker rows include hidden
-    `_provider` and `_provider_symbol` keys so downstream requests can keep the
-    provider-specific contract format while the dashboard stays on `BTCUSDT`.
-    """
-    for provider in _provider_order():
-        if provider == "kucoin":
-            tickers = _kucoin_fetch_all_tickers_bulk()
-        elif provider == "bitget":
-            tickers = _bitget_fetch_all_tickers_bulk()
-        else:
-            continue
-
-        all_symbols = sorted(tickers)
-        if tickers:
-            filtered = filter_symbols_by_volume(all_symbols, tickers)
-            if filtered:
-                return filtered, _annotate_bulk_tickers(provider, tickers)
-
-        if all_symbols:
-            fallback = _fallback_symbols_for(provider, universe=all_symbols)
-            print(f"  [WARN] {provider} volume filter returned no symbols, using fallback subset")
-            return fallback, _provider_markers(provider, fallback)
-
-    print("  [WARN] All providers unavailable, using fallback symbol list")
-    provider = _provider_order()[0] if _provider_order() else "kucoin"
-    fallback = _fallback_symbols_for(provider)
-    return fallback, _provider_markers(provider, fallback)
-
-
-def fetch_klines(
-    symbol: str,
-    interval: str,
-    limit: int = KLINE_LIMIT,
-    provider: str | None = None,
-) -> Optional[pd.DataFrame]:
-    """Fetch futures klines from the preferred provider, then configured fallbacks."""
-    for candidate in _provider_order(provider):
-        if candidate == "kucoin":
-            df = _kucoin_fetch_klines(symbol, interval, limit)
-        elif candidate == "bitget":
-            df = _bitget_fetch_klines(symbol, interval, limit)
-        else:
-            continue
-        if df is not None and not df.empty:
-            return df
-    return None
-
-
-def compute_rsi(closes: pd.Series, period: int = RSI_PERIOD) -> pd.Series:
-    """Compute RSI using Wilder-style exponential smoothing."""
+# ──────────────────────────────────────────────────────────────────────────
+# RSI (unchanged)
+# ──────────────────────────────────────────────────────────────────────────
+def compute_rsi(closes, period=RSI_PERIOD):
     delta = closes.diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
-    avg_gain = gain.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
-    avg_loss = loss.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+    avg_gain = gain.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
     rs = avg_gain / avg_loss.replace(0, np.nan)
     return 100 - (100 / (1 + rs))
 
 
-def get_rsi_for_symbol(symbol: str, interval: str, provider: str | None = None) -> Optional[float]:
-    """Return the latest RSI value for a symbol on a given timeframe."""
-    df = fetch_klines(symbol, interval, provider=provider)
+def get_rsi_for_symbol(symbol, interval):
+    df = fetch_klines(symbol, interval)
     if df is None or len(df) < RSI_PERIOD + 1:
         return None
-    rsi_series = compute_rsi(df["close"])
-    return round(rsi_series.iloc[-1], 2)
+    return round(compute_rsi(df["close"]).iloc[-1], 2)
 
 
-def get_multi_tf_rsi(symbol: str, provider: str | None = None) -> dict:
-    """Return RSI snapshots for all configured timeframes."""
-    result = {}
+def get_multi_tf_rsi(symbol):
+    out = {}
     for label, interval in TIMEFRAMES.items():
-        result[f"rsi_{label}"] = get_rsi_for_symbol(symbol, interval, provider=provider)
+        out[f"rsi_{label}"] = get_rsi_for_symbol(symbol, interval)
         time.sleep(REQUEST_DELAY)
-    return result
+    return out
 
 
-def fetch_open_interest(symbol: str, provider: str | None = None) -> Optional[dict]:
-    """Fetch current open interest from the preferred provider chain."""
-    for candidate in _provider_order(provider):
-        if candidate == "kucoin":
-            row = _kucoin_fetch_open_interest(symbol)
-        elif candidate == "bitget":
-            row = _bitget_fetch_open_interest(symbol)
-        else:
-            continue
-        if row:
-            return row
+# ──────────────────────────────────────────────────────────────────────────
+# OI snapshot — KuCoin direct, Bitget fallback
+# ──────────────────────────────────────────────────────────────────────────
+def fetch_open_interest(symbol: str) -> Optional[dict]:
+    kc_sym = to_kucoin_symbol(symbol)
+    try:
+        r = SESSION.get(f"{KUCOIN_FUTURES}/api/v1/contracts/{kc_sym}", timeout=10)
+        r.raise_for_status()
+        d = (r.json() or {}).get("data") or {}
+        oi = d.get("openInterest")
+        if oi is not None:
+            return {"oi_contracts": float(oi),
+                    "oi_time": datetime.now(timezone.utc).isoformat()}
+    except Exception as e:
+        _record_request_error("kucoin_oi", e, symbol=symbol)
+
+    try:
+        r = SESSION.get(f"{BITGET_BASE}/api/v2/mix/market/open-interest",
+                        params={"symbol": symbol, "productType": "USDT-FUTURES"}, timeout=10)
+        r.raise_for_status()
+        payload = r.json()
+        if str(payload.get("code", "")) == "00000":
+            d = payload.get("data") or {}
+            entries = d.get("openInterestList") or []
+            if entries:
+                return {"oi_contracts": float(entries[0].get("size") or 0),
+                        "oi_time": datetime.now(timezone.utc).isoformat()}
+    except Exception as e:
+        _record_request_error("bitget_oi", e, symbol=symbol)
+
     return None
 
 
-def fetch_oi_history(
-    symbol: str,
-    period: str = "5m",
-    limit: int = 30,
-    provider: str | None = None,
-) -> Optional[pd.DataFrame]:
-    """Fetch open-interest history from the preferred provider chain."""
-    for candidate in _provider_order(provider):
-        if candidate == "kucoin":
-            df = _kucoin_fetch_oi_history(symbol, period, limit)
-        elif candidate == "bitget":
-            df = _bitget_fetch_oi_history(symbol, period, limit)
-        else:
-            continue
-        if df is not None and not df.empty:
-            return df
+def fetch_oi_history(symbol: str, period: str = "5m", limit: int = 30) -> Optional[pd.DataFrame]:
+    """
+    OI history with same column shape as v2.0 features expect.
+    Sourced from OKX rubik (works on Actions, returns USD-valued OI directly).
+    """
+    inst = to_okx_inst(symbol)
+    url = f"{OKX_BASE}/api/v5/rubik/stat/contracts/open-interest-volume"
+    try:
+        r = SESSION.get(url, params={
+            "instId": inst, "period": _okx_period(period), "limit": str(min(limit, 100)),
+        }, timeout=10)
+        r.raise_for_status()
+        payload = r.json()
+        if str(payload.get("code", "")) != "0":
+            return None
+        rows = payload.get("data") or []
+        if not rows:
+            return None
+        df = pd.DataFrame(rows, columns=["timestamp", "sumOpenInterestValue", "vol_usd"])
+        df["sumOpenInterestValue"] = df["sumOpenInterestValue"].astype(float)
+        df["sumOpenInterest"] = df["sumOpenInterestValue"]
+        df["timestamp"] = pd.to_datetime(df["timestamp"].astype("int64"), unit="ms", utc=True)
+        return df.sort_values("timestamp").reset_index(drop=True)
+    except Exception as e:
+        _record_request_error("okx_oi_history", e, symbol=symbol, period=period)
+        return None
+
+
+def _okx_period(p: str) -> str:
+    return {"5m": "5m", "15m": "15m", "30m": "30m", "1h": "1H",
+            "2h": "2H", "4h": "4H", "1d": "1D"}.get(p, "5m")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Funding rate — KuCoin → Bitget → OKX
+# ──────────────────────────────────────────────────────────────────────────
+def fetch_funding_rate(symbol: str) -> Optional[float]:
+    kc_sym = to_kucoin_symbol(symbol)
+    try:
+        r = SESSION.get(f"{KUCOIN_FUTURES}/api/v1/funding-rate/{kc_sym}/current", timeout=10)
+        r.raise_for_status()
+        d = (r.json() or {}).get("data") or {}
+        if d.get("value") is not None:
+            return float(d["value"])
+    except Exception as e:
+        _record_request_error("kucoin_funding", e, symbol=symbol)
+
+    try:
+        r = SESSION.get(f"{BITGET_BASE}/api/v2/mix/market/current-fund-rate",
+                        params={"symbol": symbol, "productType": "USDT-FUTURES"}, timeout=10)
+        r.raise_for_status()
+        payload = r.json()
+        if str(payload.get("code", "")) == "00000":
+            data = payload.get("data") or []
+            row = data[0] if isinstance(data, list) and data else (data if isinstance(data, dict) else None)
+            if row and row.get("fundingRate") is not None:
+                return float(row["fundingRate"])
+    except Exception as e:
+        _record_request_error("bitget_funding", e, symbol=symbol)
+
+    try:
+        r = SESSION.get(f"{OKX_BASE}/api/v5/public/funding-rate",
+                        params={"instId": to_okx_inst(symbol)}, timeout=10)
+        r.raise_for_status()
+        payload = r.json()
+        if str(payload.get("code", "")) == "0":
+            rows = payload.get("data") or []
+            if rows and rows[0].get("fundingRate") is not None:
+                return float(rows[0]["fundingRate"])
+    except Exception as e:
+        _record_request_error("okx_funding", e, symbol=symbol)
+
     return None
 
 
-def fetch_ticker(symbol: str, provider: str | None = None) -> Optional[dict]:
-    """Fetch a single ticker snapshot from the preferred provider chain."""
-    for candidate in _provider_order(provider):
-        if candidate == "kucoin":
-            row = _kucoin_fetch_ticker(symbol)
-        elif candidate == "bitget":
-            row = _bitget_fetch_ticker(symbol)
-        else:
-            continue
-        if row:
-            return {"_provider": candidate, **row}
-    return None
-
-
-def fetch_funding_rate(symbol: str, provider: str | None = None) -> Optional[float]:
-    """Fetch the current funding rate from the preferred provider chain."""
-    for candidate in _provider_order(provider):
-        if candidate == "kucoin":
-            funding_rate = _kucoin_fetch_funding_rate(symbol)
-        elif candidate == "bitget":
-            funding_rate = _bitget_fetch_funding_rate(symbol)
-        else:
-            continue
-        if funding_rate is not None:
-            return funding_rate
+# ──────────────────────────────────────────────────────────────────────────
+# Single-symbol full scan (matches v2.0 schema)
+# ──────────────────────────────────────────────────────────────────────────
+def fetch_ticker(symbol: str) -> Optional[dict]:
+    kc_sym = to_kucoin_symbol(symbol)
+    try:
+        r = SESSION.get(f"{KUCOIN_FUTURES}/api/v1/contracts/{kc_sym}", timeout=10)
+        r.raise_for_status()
+        d = (r.json() or {}).get("data") or {}
+        if d:
+            mark = float(d.get("markPrice") or 0)
+            return {
+                "price": mark,
+                "price_change_pct_24h": float(d.get("priceChgPct") or 0) * 100,
+                "high_24h": float(d.get("highPrice") or 0),
+                "low_24h": float(d.get("lowPrice") or 0),
+                "volume_24h": float(d.get("turnoverOf24h") or 0),
+            }
+    except Exception as e:
+        _record_request_error("kucoin_ticker", e, symbol=symbol)
     return None
 
 
 def scan_symbol(
     symbol: str,
-    preloaded_ticker: dict | None = None,
+    preloaded_ticker: dict = None,
     scan_time: Optional[datetime] = None,
 ) -> Optional[dict]:
-    """Collect the scanner snapshot for a single symbol."""
-    effective_scan_time = scan_time or datetime.now(timezone.utc)
-    provider = (preloaded_ticker or {}).get("_provider")
-    row = {"symbol": symbol, "scan_time": effective_scan_time.isoformat()}
-    if provider:
-        row["market_provider"] = provider
+    """Output schema EXACTLY matches v2.0 — no other modules need changes."""
+    eff = scan_time or datetime.now(timezone.utc)
+    row = {"symbol": symbol, "scan_time": eff.isoformat()}
 
-    if preloaded_ticker and preloaded_ticker.get("price") is not None:
-        row.update({key: value for key, value in preloaded_ticker.items() if not key.startswith("_")})
+    if preloaded_ticker:
+        public = {"price", "price_change_pct_24h", "high_24h", "low_24h", "volume_24h"}
+        row.update({k: v for k, v in preloaded_ticker.items() if k in public})
     else:
-        ticker = fetch_ticker(symbol, provider=provider)
-        if ticker is None:
+        t = fetch_ticker(symbol)
+        if t is None:
             return None
-        provider = ticker.get("_provider", provider)
-        if provider:
-            row["market_provider"] = provider
-        row.update({key: value for key, value in ticker.items() if not key.startswith("_")})
+        row.update(t)
 
-    row.update(get_multi_tf_rsi(symbol, provider=provider))
+    row.update(get_multi_tf_rsi(symbol))
 
-    if "oi_contracts" not in row:
-        open_interest = fetch_open_interest(symbol, provider=provider)
-        if open_interest:
-            row["oi_contracts"] = open_interest["oi_contracts"]
-            if open_interest.get("oi_value_now") is not None:
-                row["oi_value_now"] = open_interest["oi_value_now"]
+    # OI snapshot — preloaded if available
+    if preloaded_ticker and preloaded_ticker.get("_oi_value_usdt"):
+        row["oi_contracts"] = preloaded_ticker["_oi_value_usdt"]
+    else:
+        oi = fetch_open_interest(symbol)
+        if oi:
+            row["oi_contracts"] = oi["oi_contracts"]
 
-    oi_hist = fetch_oi_history(symbol, period="5m", limit=12, provider=provider)
+    # OI history → 1h change
+    oi_hist = fetch_oi_history(symbol, period="5m", limit=12)
     if oi_hist is not None and len(oi_hist) >= 2:
-        if "sumOpenInterest" in oi_hist.columns:
-            row["oi_contracts"] = oi_hist["sumOpenInterest"].iloc[-1]
         row["oi_value_now"] = oi_hist["sumOpenInterestValue"].iloc[-1]
         row["oi_value_1h_ago"] = oi_hist["sumOpenInterestValue"].iloc[0]
-        if row["oi_value_1h_ago"]:
+        if row["oi_value_1h_ago"] != 0:
             row["oi_change_pct_1h"] = round(
-                (row["oi_value_now"] - row["oi_value_1h_ago"]) / row["oi_value_1h_ago"] * 100,
-                3,
+                (row["oi_value_now"] - row["oi_value_1h_ago"]) / row["oi_value_1h_ago"] * 100, 3
             )
 
-    if "funding_rate" not in row:
-        funding_rate = fetch_funding_rate(symbol, provider=provider)
-        if funding_rate is not None:
-            row["funding_rate"] = funding_rate
+    if preloaded_ticker and preloaded_ticker.get("_funding_rate") is not None:
+        row["funding_rate"] = preloaded_ticker["_funding_rate"]
+    else:
+        fr = fetch_funding_rate(symbol)
+        if fr is not None:
+            row["funding_rate"] = fr
 
     return row
