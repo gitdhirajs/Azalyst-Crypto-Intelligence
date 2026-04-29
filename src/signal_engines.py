@@ -195,10 +195,13 @@ class FundingExtremeEngine:
                 f"OI-weighted funding {oiw_bps:.1f}bps — longs overcrowded; "
                 f"contrarian short setup. Spread {spread:.1f}bps."
             )
-                reason = (
-                    f"OI-weighted funding {oiw_bps:.1f}bps — shorts paying longs; "
-                    f"squeeze setup. Spread {spread:.1f}bps."
-                )
+        elif oiw_bps <= self.SQUEEZE_BPS:
+            direction = "LONG"
+            strength = min(40 + abs(oiw_bps - self.SQUEEZE_BPS) * 4, 85)
+            reason = (
+                f"OI-weighted funding {oiw_bps:.1f}bps — shorts paying longs; "
+                f"squeeze setup. Spread {spread:.1f}bps."
+            )
 
         # Trend Gating: Don't fade strong trends
         if direction == 'SHORT' and trend_strength > 0.5:

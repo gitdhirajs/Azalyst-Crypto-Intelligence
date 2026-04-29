@@ -28,6 +28,7 @@ const els = {
   mainModelCard: document.getElementById("mainModelCard"),
   hourlyModelCard: document.getElementById("hourlyModelCard"),
   hourlySignalsTable: document.getElementById("hourlySignalsTable"),
+  fusedSignalsTable: document.getElementById("fusedSignalsTable"),
   summaryPreview: document.getElementById("summaryPreview"),
   mainFeatures: document.getElementById("mainFeatures"),
   hourlyFeatures: document.getElementById("hourlyFeatures"),
@@ -220,6 +221,7 @@ function mergePayloads(bootstrap, runtime) {
     latest_scan_signals:
       hasRuntime ? runtime?.latest_scan_signals || [] : bootstrap?.latest_scan_signals || [],
     hourly_live_signals: hourlySignals,
+    fused_signals: hasRuntime ? runtime?.fused_signals || [] : bootstrap?.fused_signals || [],
     summary_markdown:
       runtime?.summary_markdown || bootstrap?.summary_markdown || "No summary published yet.",
     mainReportSource:
@@ -415,6 +417,39 @@ function renderSignals(signals) {
         <span>RSI 1H</span>
         <span>Body %</span>
         <span>OI 1H %</span>
+      </div>
+      ${rows.join("")}
+    </div>
+  `;
+}
+
+function renderFusedSignals(signals) {
+  if (!signals?.length) {
+    els.fusedSignalsTable.innerHTML = `<div class="empty-state">No institutional fused signals available.</div>`;
+    return;
+  }
+
+  const rows = signals.map((signal) => {
+    const tone = signal.consensus_tier === 'A' ? 'good' : (signal.consensus_tier === 'B' ? 'info' : 'warn');
+    return `
+      <div class="signal-row">
+        <strong>${signal.symbol}</strong>
+        <span class="pill pill-${statusTone(signal.direction === 'LONG' ? 'healthy' : 'error')}">${signal.direction}</span>
+        <span class="pill pill-${tone}">Tier ${signal.consensus_tier}</span>
+        <strong>${formatDecimal(signal.fused_score, 1)}</strong>
+        <span>${formatDecimal(signal.metrics?.agreement_factor || 1, 2)}</span>
+      </div>
+    `;
+  });
+
+  els.fusedSignalsTable.innerHTML = `
+    <div class="signal-table">
+      <div class="signal-head">
+        <span>Symbol</span>
+        <span>Dir</span>
+        <span>Tier</span>
+        <span>Score</span>
+        <span>Agree</span>
       </div>
       ${rows.join("")}
     </div>
@@ -662,6 +697,7 @@ function renderShell(repo, payload, runs, runtimeFiles, bootstrap, runtimePayloa
     payload.hourlyReportSource,
     "hourly"
   );
+  renderFusedSignals(payload.fused_signals);
   renderSignals(payload.hourly_live_signals);
   renderFeatures(els.mainFeatures, payload.main_report);
   renderFeatures(els.hourlyFeatures, payload.hourly_report);
