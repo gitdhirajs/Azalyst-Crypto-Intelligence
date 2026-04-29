@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import time
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
@@ -225,7 +226,55 @@ def run_multi_engine(scan_df: pd.DataFrame) -> List[Dict]:
         }, fh, indent=2, default=str)
     log.info("Fused %d/%d candidate symbols (free public APIs).",
              len(out), len(candidates))
+             
+    # Educational Frame Bridge: Copy relevant methodology frames for dashboard UI
+    try:
+        inject_educational_frames(out)
+    except Exception as e:
+        log.warning(f"Educational frame injection failed: {e}")
+        
     return out
+
+def inject_educational_frames(signals: List[Dict]):
+    """Finds methodology frames matching the signals and copies them to reports/frames/"""
+    manifest_path = Path(r"D:\Azalyst Bernd Skorupinski\_audit\manifest.json")
+    if not manifest_path.exists():
+        return
+
+    frames_dir = REPORTS_DIR / "frames"
+    frames_dir.mkdir(exist_ok=True)
+    
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+    
+    lessons = manifest.get("lessons", [])
+    
+    for s in signals:
+        # Map signal to keywords
+        keywords = ["Candle", "Zone"]
+        if s.get("direction") == "LONG":
+            keywords.append("Demand")
+        else:
+            keywords.append("Supply")
+            
+        # Find a matching lesson
+        matching_frame = None
+        for L in lessons:
+            if any(k.lower() in L.get("rel_path", "").lower() for k in keywords):
+                frs = L.get("frames", [])
+                if frs:
+                    # Pick a frame from the middle
+                    pick = frs[len(frs)//2]
+                    src = Path(L.get("abs_dir")) / pick["file"]
+                    if src.exists():
+                        dest_name = f"{s['symbol']}_edu.jpg"
+                        dest = frames_dir / dest_name
+                        shutil.copy2(src, dest)
+                        matching_frame = f"reports/frames/{dest_name}"
+                        break
+        
+        if matching_frame:
+            s["edu_frame"] = matching_frame
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -240,6 +289,19 @@ def _read_text(path) -> Optional[str]:
     if not path.exists():
         return None
     return path.read_text(encoding="utf-8")
+
+
+def _clean_nan(obj):
+    """Recursively replace NaN with None for JSON compatibility."""
+    import math
+    if isinstance(obj, dict):
+        return {k: _clean_nan(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_clean_nan(x) for x in obj]
+    elif isinstance(obj, float) and math.isnan(obj):
+        return None
+    return obj
+
 
 
 def write_runtime_payload(
@@ -320,10 +382,12 @@ def write_runtime_payload(
         "summary_markdown": _read_text(REPORTS_DIR / "latest_summary.md"),
     }
 
+    dashboard_payload = _clean_nan(dashboard_payload)
+
     with open(REPORTS_DIR / "latest_runtime_status.json", "w", encoding="utf-8") as fh:
-        json.dump(runtime_status, fh, indent=2, default=str)
+        json.dump(_clean_nan(runtime_status), fh, indent=2)
     with open(REPORTS_DIR / "latest_dashboard_payload.json", "w", encoding="utf-8") as fh:
-        json.dump(dashboard_payload, fh, indent=2, default=str)
+        json.dump(dashboard_payload, fh, indent=2)
     return dashboard_payload
 
 
