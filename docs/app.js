@@ -148,37 +148,55 @@ function decodeGitHubContent(content) {
   return new TextDecoder("utf-8").decode(bytes);
 }
 
-async function fetchJson(url) {
+async function fetchJSON(url) {
   try {
-    const response = await fetch(url, {
-      headers: {
-        Accept: "application/vnd.github+json, application/json",
-      },
-    });
-    if (!response.ok) {
-      return null;
-    }
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
-  } catch (_error) {
+  } catch (err) {
+    console.warn(`Fetch failed for ${url}:`, err);
     return null;
   }
+}
+
+async function getRuntimeData() {
+  const isLocal = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  // If local, try to fetch from the local reports directory first
+  if (isLocal) {
+    console.log("Local environment detected, fetching from local reports/");
+    const fused = await fetchJSON('../reports/latest_fused_signals.json');
+    if (fused) {
+        return { 
+          fused_signals: fused.signals || [],
+          timestamp: fused.generated_at
+        };
+    }
+  }
+
+  // Fallback to GitHub API (Production/Remote)
+  const repo = "gitdhirajs/Azalyst-Crypto-Intelligence";
+  const branch = "runtime-data";
+  const url = `https://api.github.com/repos/${repo}/contents/reports/latest_dashboard_payload.json?ref=${branch}`;
+  
+  const data = await fetchJSON(url);
+  if (data?.content) {
+    const payload = JSON.parse(atob(data.content));
+    return payload;
+  }
+  return null;
 }
 
 async function fetchRepoJson(path, ref = "main") {
-  const response = await fetchJson(`${API_BASE}/contents/${path}?ref=${ref}`);
-  if (!response || !response.content) {
-    return null;
-  }
-  try {
-    return JSON.parse(decodeGitHubContent(response.content));
-  } catch (_error) {
-    return null;
-  }
+  // Use raw.githubusercontent.com to bypass API rate limits and complexity
+  const url = `https://raw.githubusercontent.com/${CONFIG.owner}/${CONFIG.repo}/${ref}/${path}`;
+  return await fetchJSON(url);
 }
 
 async function fetchRepoListing(path, ref = "main") {
-  const listing = await fetchJson(`${API_BASE}/contents/${path}?ref=${ref}`);
-  return Array.isArray(listing) ? listing : [];
+  // For listings, we still need the API, but we can fallback gracefully
+  const response = await fetchJSON(`${API_BASE}/contents/${path}?ref=${ref}`);
+  return Array.isArray(response) ? response : [];
 }
 
 function latestRunByName(runs) {
@@ -429,31 +447,32 @@ function renderFusedSignals(signals) {
     return;
   }
 
-  const rows = signals.map((signal) => {
+  els.fusedSignalsTable.innerHTML = signals.map((signal) => {
     const tone = signal.consensus_tier === 'A' ? 'good' : (signal.consensus_tier === 'B' ? 'info' : 'warn');
+    const eduImg = signal.edu_frame ? `
+      <div class="edu-frame-container">
+        <div class="edu-title">Methodology Evidence</div>
+        <img src="${signal.edu_frame}" class="edu-thumb" alt="Educational Frame" onclick="window.open(this.src)">
+        <div class="edu-caption">Blueprint v7 methodology visual alignment</div>
+      </div>
+    ` : '';
+
     return `
-      <div class="signal-row">
-        <strong>${signal.symbol}</strong>
-        <span class="pill pill-${statusTone(signal.direction === 'LONG' ? 'healthy' : 'error')}">${signal.direction}</span>
-        <span class="pill pill-${tone}">Tier ${signal.consensus_tier}</span>
-        <strong>${formatDecimal(signal.fused_score, 1)}</strong>
-        <span>${formatDecimal(signal.metrics?.agreement_factor || 1, 2)}</span>
+      <div class="metric-card" style="margin-bottom: 1rem; border-left: 3px solid var(--pill-${tone}-color, #222);">
+        <div class="signal-row" style="border-bottom: 1px solid #111; margin-bottom: 8px;">
+          <strong>${signal.symbol}</strong>
+          <span class="pill pill-${statusTone(signal.direction === 'LONG' ? 'healthy' : 'error')}">${signal.direction}</span>
+          <span class="pill pill-${tone}">Tier ${signal.consensus_tier}</span>
+          <strong>${formatDecimal(signal.fused_score, 1)}</strong>
+        </div>
+        <div class="micro-copy" style="margin-bottom: 8px;">
+          Agreement: ${formatDecimal(signal.metrics?.agreement_factor || 1, 2)} | 
+          Engines: ${signal.engines_long.length + signal.engines_short.length}
+        </div>
+        ${eduImg}
       </div>
     `;
-  });
-
-  els.fusedSignalsTable.innerHTML = `
-    <div class="signal-table">
-      <div class="signal-head">
-        <span>Symbol</span>
-        <span>Dir</span>
-        <span>Tier</span>
-        <span>Score</span>
-        <span>Agree</span>
-      </div>
-      ${rows.join("")}
-    </div>
-  `;
+  }).join("");
 }
 
 function renderFeatures(target, report) {
@@ -727,10 +746,10 @@ function renderShell(repo, payload, runs, runtimeFiles, bootstrap, runtimePayloa
 
 async function loadDashboard() {
   const [bootstrap, runtimePayload, workflowResponse, repo, runtimeFiles] = await Promise.all([
-    fetchJson(CONFIG.bootstrapUrl),
+    fetchJSON(CONFIG.bootstrapUrl),
     fetchRepoJson("reports/latest_dashboard_payload.json", CONFIG.runtimeRef),
-    fetchJson(`${API_BASE}/actions/runs?per_page=8`),
-    fetchJson(API_BASE),
+    fetchJSON(`${API_BASE}/actions/runs?per_page=8`),
+    fetchJSON(API_BASE),
     fetchRepoListing("reports", CONFIG.runtimeRef),
   ]);
 
