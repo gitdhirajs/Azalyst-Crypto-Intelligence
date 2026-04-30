@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-30T17:09:08.259400+00:00",
+  "generated_at": "2026-04-30T20:19:10.024458+00:00",
   "dashboard_name": "Azalyst Crypto Futures Scanner v2.1",
   "source_mode": "github_actions",
   "data_source": "free_public_apis (KuCoin/Bitget/OKX \u2014 no paid keys, no blocked exchanges)",
@@ -79,21 +79,14 @@
     }
   },
   "main_model": {
-    "status": "not_enough_data",
-    "timestamp": null,
-    "accuracy": null,
-    "roc_auc": null,
-    "samples": 80,
-    "calibrated": null,
-    "primary_split": null,
-    "edge_over_baseline_pct": null
+    "status": "missing"
   },
   "hourly_model": {
     "status": "trained",
-    "timestamp": "2026-04-30T15:59:33.694136+00:00",
-    "accuracy": 0.9579,
-    "roc_auc": 0.7201,
-    "samples": 12579
+    "timestamp": "2026-04-30T20:19:08.627162+00:00",
+    "accuracy": 0.9676,
+    "roc_auc": 0.7727,
+    "samples": 11587
   },
   "backtest_summary": {
     "status": "no_backtest_run"
