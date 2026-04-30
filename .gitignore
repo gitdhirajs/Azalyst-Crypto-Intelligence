@@ -14,3 +14,13 @@ reports/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+
+# AZALYST - runtime artifacts
+deepseek_mega_prompt.txt
+data/*.db
+data/*.csv
+models/*.pkl
+models/*.json
+logs/*
+status.json
