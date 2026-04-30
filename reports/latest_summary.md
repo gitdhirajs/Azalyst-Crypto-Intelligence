@@ -4,13 +4,13 @@
 
 | symbol | price | price_change_pct_24h | ml_probability |
 | --- | --- | --- | --- |
-| BTCUSDT | 75738.9 | -1.6199999999999999 | None |
-| ETHUSDT | 2245.77 | -3.51 | None |
-| SOLUSDT | 82.882 | -2.29 | None |
-| DOGEUSDT | 0.10602 | 3.5999999999999996 | None |
-| SKYAIUSDT | 0.30309 | 31.03 | None |
-| PEPEUSDT | 3.8542e-06 | -1.4000000000000001 | None |
-| XRPUSDT | 1.36861 | -1.78 | None |
-| BSBUSDT | 0.602 | -33.54 | None |
-| HYPEUSDT | 39.583 | -2.5700000000000003 | None |
-| PENGUUSDT | 0.009619 | -3.8699999999999997 | None |
+| BTCUSDT | 75823.6 | -1.5699999999999998 | None |
+| ETHUSDT | 2250.85 | -3.1300000000000003 | None |
+| SOLUSDT | 83.054 | -1.8599999999999999 | None |
+| DOGEUSDT | 0.10621 | 3.9899999999999998 | None |
+| SKYAIUSDT | 0.29538 | 28.01 | None |
+| PEPEUSDT | 3.8964e-06 | -0.13999999999999999 | None |
+| XRPUSDT | 1.36954 | -1.55 | None |
+| BSBUSDT | 0.54093 | -35.54 | None |
+| HYPEUSDT | 39.593 | -2.55 | None |
+| PENGUUSDT | 0.009746 | -2.81 | None |
