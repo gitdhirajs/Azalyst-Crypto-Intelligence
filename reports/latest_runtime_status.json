@@ -1,68 +1,24 @@
 {
-  "generated_at": "2026-04-29T23:27:08.718991+00:00",
+  "generated_at": "2026-04-30T05:10:19.649915+00:00",
   "dashboard_name": "Azalyst Crypto Futures Scanner v2.1",
   "source_mode": "github_actions",
   "data_source": "free_public_apis (KuCoin/Bitget/OKX \u2014 no paid keys, no blocked exchanges)",
   "scanner": {
-    "timestamp": "2026-04-29T23:21:51.344441+00:00",
+    "timestamp": "2026-04-30T05:06:18.137312+00:00",
     "status": "healthy",
     "symbols_attempted": 82,
     "symbols_scanned": 82,
     "symbols_failed": 0,
     "min_volume_24h_usdt": 5000000.0,
     "request_errors": {
-      "count": 583,
+      "count": 82,
       "status_counts": {
-        "400": 92
+        "400": 82
       },
       "endpoint_counts": {
-        "kucoin_klines": 491,
-        "okx_oi_history": 82,
-        "https://api.bitget.com/api/v2/mix/market/candles": 10
+        "okx_oi_history": 82
       },
       "examples": [
-        {
-          "endpoint": "kucoin_klines",
-          "status_code": null,
-          "message": "6 columns passed, passed data had 7 columns",
-          "symbol": "BTCUSDT",
-          "interval": "1m"
-        },
-        {
-          "endpoint": "kucoin_klines",
-          "status_code": null,
-          "message": "6 columns passed, passed data had 7 columns",
-          "symbol": "BTCUSDT",
-          "interval": "5m"
-        },
-        {
-          "endpoint": "kucoin_klines",
-          "status_code": null,
-          "message": "6 columns passed, passed data had 7 columns",
-          "symbol": "BTCUSDT",
-          "interval": "15m"
-        },
-        {
-          "endpoint": "kucoin_klines",
-          "status_code": null,
-          "message": "6 columns passed, passed data had 7 columns",
-          "symbol": "BTCUSDT",
-          "interval": "1h"
-        },
-        {
-          "endpoint": "kucoin_klines",
-          "status_code": null,
-          "message": "6 columns passed, passed data had 7 columns",
-          "symbol": "BTCUSDT",
-          "interval": "4h"
-        },
-        {
-          "endpoint": "kucoin_klines",
-          "status_code": null,
-          "message": "6 columns passed, passed data had 7 columns",
-          "symbol": "BTCUSDT",
-          "interval": "1d"
-        },
         {
           "endpoint": "okx_oi_history",
           "status_code": 400,
@@ -71,11 +27,53 @@
           "period": "5m"
         },
         {
-          "endpoint": "kucoin_klines",
-          "status_code": null,
-          "message": "6 columns passed, passed data had 7 columns",
+          "endpoint": "okx_oi_history",
+          "status_code": 400,
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=ETH-USDT-SWAP&period=5m&limit=12",
           "symbol": "ETHUSDT",
-          "interval": "1m"
+          "period": "5m"
+        },
+        {
+          "endpoint": "okx_oi_history",
+          "status_code": 400,
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SOL-USDT-SWAP&period=5m&limit=12",
+          "symbol": "SOLUSDT",
+          "period": "5m"
+        },
+        {
+          "endpoint": "okx_oi_history",
+          "status_code": 400,
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=DOGE-USDT-SWAP&period=5m&limit=12",
+          "symbol": "DOGEUSDT",
+          "period": "5m"
+        },
+        {
+          "endpoint": "okx_oi_history",
+          "status_code": 400,
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SKYAI-USDT-SWAP&period=5m&limit=12",
+          "symbol": "SKYAIUSDT",
+          "period": "5m"
+        },
+        {
+          "endpoint": "okx_oi_history",
+          "status_code": 400,
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=PEPE-USDT-SWAP&period=5m&limit=12",
+          "symbol": "PEPEUSDT",
+          "period": "5m"
+        },
+        {
+          "endpoint": "okx_oi_history",
+          "status_code": 400,
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=XRP-USDT-SWAP&period=5m&limit=12",
+          "symbol": "XRPUSDT",
+          "period": "5m"
+        },
+        {
+          "endpoint": "okx_oi_history",
+          "status_code": 400,
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=HYPE-USDT-SWAP&period=5m&limit=12",
+          "symbol": "HYPEUSDT",
+          "period": "5m"
         }
       ]
     }
