@@ -1,0 +1,100 @@
+{
+  "dashboard_type": "crypto_intelligence",
+  "generated_at": "2026-04-30 10:33:56 UTC",
+  "portfolio_value": 0,
+  "total_deposited": 10000,
+  "cash": 5000,
+  "monthly_reserve": 5000,
+  "market_value": 0,
+  "total_invested": 0,
+  "unrealised_pnl": 0,
+  "unrealised_str": "+0.00",
+  "realised_pnl": 0.0,
+  "realised_str": "+0.00",
+  "change": "+0.00%",
+  "change_raw": 0.0,
+  "closed_trades": 0,
+  "usd_inr_rate": 83.5,
+  "positions": [],
+  "closed_trades_list": [],
+  "track_record": {
+    "total_trades": 0,
+    "winners": 0,
+    "losers": 0,
+    "win_rate": 0.0,
+    "avg_win": 0.0,
+    "avg_loss": 0.0,
+    "profit_factor": 0.0,
+    "expectancy": 0.0,
+    "sharpe_proxy": 0.0,
+    "best": null,
+    "worst": null
+  },
+  "confidence_threshold": 50,
+  "allocation": {
+    "labels": [
+      "BTC",
+      "ETH",
+      "SOL",
+      "CASH"
+    ],
+    "values": [
+      30,
+      25,
+      20,
+      25
+    ]
+  },
+  "pnl": {
+    "labels": [],
+    "values": []
+  },
+  "confidence": [],
+  "signals": [],
+  "articles": [],
+  "market_snapshot": [],
+  "risk_controls": {
+    "circuit_breaker_active": false,
+    "drawdown_from_peak_pct": 0.0,
+    "portfolio_peak": 0,
+    "vix": null,
+    "vix_regime": "NORMAL",
+    "sector_concentration": [],
+    "max_drawdown_pct": 0.0,
+    "sector_cap_pct": 30,
+    "trailing_stop_pct": 8,
+    "hard_stop_pct": 10,
+    "partial_profit_pct": 8
+  },
+  "model_health": {
+    "main_model": {
+      "status": "unknown",
+      "accuracy": null,
+      "f1_score": null,
+      "n_train": 0,
+      "n_test": 0,
+      "n_symbols": 0,
+      "top_features": []
+    },
+    "hourly_model": {
+      "status": "unknown",
+      "accuracy": null,
+      "f1_score": null,
+      "n_train": 0,
+      "n_test": 0,
+      "top_features": []
+    }
+  },
+  "system_metrics": {
+    "scans_collected": 0,
+    "feature_batches": 0,
+    "latest_summary_snippet": ""
+  },
+  "aladdin_risk": {},
+  "logs": [
+    "2026-04-30 10:33:56 UTC [INFO] AZALYST CRYPTO \u2014 status.json generated",
+    "2026-04-30 10:33:56 UTC [INFO] SCANNER \u2014 0 active signals",
+    "2026-04-30 10:33:56 UTC [INFO] OUTCOMES \u2014 0/0 hits (None%)",
+    "2026-04-30 10:33:56 UTC [INFO] MODELS \u2014 Main: unknown | Hourly: unknown"
+  ]
+}
