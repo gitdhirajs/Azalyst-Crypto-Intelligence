@@ -343,16 +343,29 @@ def _binance_fallback_discovery() -> Tuple[List[str], Dict[str, dict]]:
 # ──────────────────────────────────────────────────────────────────────────
 # Klines — KuCoin → Bitget → OKX → (optionally Binance)
 # ──────────────────────────────────────────────────────────────────────────
-def fetch_klines(symbol: str, interval: str, limit: int = KLINE_LIMIT) -> Optional[pd.DataFrame]:
-    df = _fetch_klines_kucoin(symbol, interval, limit)
-    if df is not None and not df.empty:
-        return df
-    df = _fetch_klines_bitget(symbol, interval, limit)
-    if df is not None and not df.empty:
-        return df
-    df = _fetch_klines_okx(symbol, interval, limit)
-    if df is not None and not df.empty:
-        return df
+def fetch_klines(
+    symbol: str,
+    interval: str,
+    limit: int = KLINE_LIMIT,
+    provider: str | None = None,
+) -> Optional[pd.DataFrame]:
+    """Fetch klines while preserving compatibility with provider-aware callers."""
+    fetchers = {
+        "kucoin": _fetch_klines_kucoin,
+        "bitget": _fetch_klines_bitget,
+        "okx": _fetch_klines_okx,
+    }
+
+    ordered = []
+    if provider in fetchers:
+        ordered.append(provider)
+    ordered.extend(name for name in ("kucoin", "bitget", "okx") if name not in ordered)
+
+    for name in ordered:
+        df = fetchers[name](symbol, interval, limit)
+        if df is not None and not df.empty:
+            return df
+
     if ALLOW_BLOCKED:
         return _fetch_klines_binance(symbol, interval, limit)
     return None
@@ -545,11 +558,17 @@ def fetch_open_interest(symbol: str) -> Optional[dict]:
     return None
 
 
-def fetch_oi_history(symbol: str, period: str = "5m", limit: int = 30) -> Optional[pd.DataFrame]:
+def fetch_oi_history(
+    symbol: str,
+    period: str = "5m",
+    limit: int = 30,
+    provider: str | None = None,
+) -> Optional[pd.DataFrame]:
     """
     OI history with same column shape as v2.0 features expect.
     Sourced from OKX rubik (works on Actions, returns USD-valued OI directly).
     """
+    _ = provider  # kept for compatibility with hourly-trainer call sites
     inst = to_okx_inst(symbol)
     url = f"{OKX_BASE}/api/v5/rubik/stat/contracts/open-interest-volume"
     try:
