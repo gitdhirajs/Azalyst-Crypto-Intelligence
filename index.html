@@ -4,10 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Azalyst Crypto Intelligence</title>
-  <meta
-    name="description"
-    content="Azalyst Crypto Intelligence — runtime health, ML training snapshots, multi-engine consensus signals, and GitHub Actions telemetry."
-  >
+  <meta name="description" content="Azalyst Crypto Intelligence — runtime health, ML signals, multi-engine consensus, and GitHub Actions telemetry.">
   <meta name="theme-color" content="#000000">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -15,41 +12,40 @@
   <div class="backdrop" aria-hidden="true"></div>
   <div class="scanlines" aria-hidden="true"></div>
 
-  <!-- ── Topbar (mirrors ETF Intelligence header) ──────────────────── -->
+  <!-- ══ TOPBAR — matches ETF Intelligence exactly: brand + inline tabs + meta ══ -->
   <header class="topbar">
+    <!-- Left: brand block -->
     <div class="brand-block">
-      <div class="brand-mark">AZALYST</div>
-      <div class="brand-sub">
-        <h1>CRYPTO INTELLIGENCE</h1>
-        <p>Perp scanner · ML signals · Engine consensus</p>
-      </div>
+      <span class="brand-mark">AZALYST</span>
+      <span class="brand-sep"></span>
+      <span class="brand-sub">CRYPTO INTELLIGENCE</span>
     </div>
+
+    <!-- Centre: inline tab navigation (same as ETF) -->
+    <nav class="inline-tabs" aria-label="Dashboard sections">
+      <button class="itab active" data-tab="overview">Market Data</button>
+      <button class="itab" data-tab="models">Models</button>
+      <button class="itab" data-tab="ops">Operations</button>
+    </nav>
+
+    <!-- Right: status + clock -->
     <div class="topbar-meta">
-      <!-- Live status dot — same pattern as ETF "● LIVE / ● OFFLINE" -->
       <span id="liveStatus" class="status-dot warn">LOADING</span>
-      <span id="clockValue" class="meta-value">--:--:-- IST</span>
+      <span id="clockValue" class="meta-clock">--:--:-- IST</span>
+      <span id="updatedLabel" class="meta-updated"></span>
     </div>
   </header>
 
-  <!-- ── Ticker tape ─────────────────────────────────────────────────── -->
-  <div class="ticker" role="marquee" aria-label="Live scanner data ticker">
+  <!-- ══ TICKER ══ -->
+  <div class="ticker" role="marquee" aria-label="Live scanner data">
     <div id="tickerTape" class="ticker-track">Connecting to runtime telemetry...</div>
   </div>
 
-  <!-- ── Tab bar (matches ETF style) ──────────────────────────────────── -->
-  <nav class="tabbar" aria-label="Dashboard sections">
-    <button class="tab active" data-tab="overview">Market Data</button>
-    <button class="tab" data-tab="models">Models</button>
-    <button class="tab" data-tab="ops">Operations</button>
-  </nav>
-
-  <!-- ── Main shell ─────────────────────────────────────────────────── -->
+  <!-- ══ MAIN SHELL ══ -->
   <main class="shell">
 
-    <!-- ══ OVERVIEW TAB ═══════════════════════════════════════════════ -->
+    <!-- MARKET DATA TAB -->
     <section class="tab-panel active" id="tab-overview">
-
-      <!-- Hero row: 3 columns -->
       <section class="grid hero-grid">
 
         <article class="panel panel-hero">
@@ -60,32 +56,14 @@
           <div class="hero-stack">
             <div>
               <p class="kicker">Repository</p>
-              <div class="hero-title">gitdhirajs / azalyst-crypto-intelligence</div>
+              <div id="heroTitle" class="hero-title">gitdhirajs / azalyst-crypto-intelligence</div>
             </div>
-            <p id="headlineText" class="hero-copy">
-              Waiting for runtime status and model snapshots...
-            </p>
+            <p id="headlineText" class="hero-copy">Waiting for runtime status and model snapshots...</p>
             <div class="hero-actions">
-              <a
-                class="action-link"
-                href="https://github.com/gitdhirajs/azalyst-crypto-intelligence"
-                target="_blank" rel="noreferrer"
-              >Repo</a>
-              <a
-                class="action-link"
-                href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions"
-                target="_blank" rel="noreferrer"
-              >Actions</a>
-              <a
-                class="action-link"
-                href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data"
-                target="_blank" rel="noreferrer"
-              >Runtime Data</a>
-              <a
-                class="action-link"
-                href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/"
-                target="_blank" rel="noreferrer"
-              >ETF Dashboard ↗</a>
+              <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank" rel="noreferrer">Repo</a>
+              <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions" target="_blank" rel="noreferrer">Actions</a>
+              <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data" target="_blank" rel="noreferrer">Runtime Data</a>
+              <a class="action-link" href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank" rel="noreferrer">ETF Dashboard ↗</a>
             </div>
           </div>
         </article>
@@ -105,10 +83,8 @@
           </div>
           <div id="runtimeStatusCard" class="metric-stack"></div>
         </article>
-
       </section>
 
-      <!-- Model cards row -->
       <section class="grid two-col">
         <article class="panel">
           <div class="panel-header">
@@ -117,7 +93,6 @@
           </div>
           <div id="mainModelCard"></div>
         </article>
-
         <article class="panel">
           <div class="panel-header">
             <span>Hourly Candle Model</span>
@@ -127,7 +102,6 @@
         </article>
       </section>
 
-      <!-- Signals + summary row -->
       <section class="grid two-col">
         <article class="panel">
           <div class="panel-header">
@@ -136,7 +110,6 @@
           </div>
           <div id="hourlySignalsTable"></div>
         </article>
-
         <article class="panel">
           <div class="panel-header">
             <span>Latest Summary</span>
@@ -145,12 +118,10 @@
           <pre id="summaryPreview" class="summary-box">Loading summary...</pre>
         </article>
       </section>
-
     </section>
 
-    <!-- ══ MODELS TAB ════════════════════════════════════════════════ -->
+    <!-- MODELS TAB -->
     <section class="tab-panel" id="tab-models">
-
       <section class="grid two-col">
         <article class="panel">
           <div class="panel-header">
@@ -159,7 +130,6 @@
           </div>
           <div id="mainFeatures"></div>
         </article>
-
         <article class="panel">
           <div class="panel-header">
             <span>Hourly Model Feature Stack</span>
@@ -168,7 +138,6 @@
           <div id="hourlyFeatures"></div>
         </article>
       </section>
-
       <section class="grid two-col">
         <article class="panel">
           <div class="panel-header">
@@ -177,7 +146,6 @@
           </div>
           <div id="mainClusters"></div>
         </article>
-
         <article class="panel">
           <div class="panel-header">
             <span>Hourly Pattern Clusters</span>
@@ -186,7 +154,6 @@
           <div id="hourlyClusters"></div>
         </article>
       </section>
-
       <section class="grid two-col">
         <article class="panel">
           <div class="panel-header">
@@ -195,7 +162,6 @@
           </div>
           <div id="mainBuckets"></div>
         </article>
-
         <article class="panel">
           <div class="panel-header">
             <span>Hourly Continuation Buckets</span>
@@ -204,12 +170,10 @@
           <div id="hourlyBuckets"></div>
         </article>
       </section>
-
     </section>
 
-    <!-- ══ OPERATIONS TAB ════════════════════════════════════════════ -->
+    <!-- OPERATIONS TAB -->
     <section class="tab-panel" id="tab-ops">
-
       <section class="grid two-col">
         <article class="panel">
           <div class="panel-header">
@@ -218,7 +182,6 @@
           </div>
           <div id="workflowTable"></div>
         </article>
-
         <article class="panel">
           <div class="panel-header">
             <span>Data Sources</span>
@@ -227,7 +190,6 @@
           <div id="sourceMatrix"></div>
         </article>
       </section>
-
       <section class="grid two-col">
         <article class="panel">
           <div class="panel-header">
@@ -236,7 +198,6 @@
           </div>
           <div id="runtimeFiles"></div>
         </article>
-
         <article class="panel">
           <div class="panel-header">
             <span>Known Issues</span>
@@ -245,19 +206,18 @@
           <div id="issuesPanel"></div>
         </article>
       </section>
-
     </section>
 
   </main>
 
-  <!-- ── Footer (matches ETF style) ───────────────────────────────── -->
+  <!-- ══ FOOTER ══ -->
   <footer class="footer">
     <span id="footerStatus">Waiting for data...</span>
     <span class="footer-links">
       <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank" rel="noreferrer">Source</a>
       <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions" target="_blank" rel="noreferrer">Runs</a>
       <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data" target="_blank" rel="noreferrer">Artifacts</a>
-      <a href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank" rel="noreferrer">ETF Dashboard ↗</a>
+      <a href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank" rel="noreferrer">ETF ↗</a>
     </span>
   </footer>
 
