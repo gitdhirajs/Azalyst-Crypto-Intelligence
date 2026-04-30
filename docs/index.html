@@ -1,255 +1,518 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Azalyst Crypto Intelligence</title>
-  <meta name="description"
-    content="Azalyst Crypto Intelligence — runtime health, ML training snapshots, multi-engine consensus signals, and GitHub Actions telemetry.">
-  <meta name="theme-color" content="#000000">
-  <link rel="stylesheet" href="styles.css">
-</head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Azalyst Crypto Intelligence</title>
+<meta name="theme-color" content="#ff6600">
+<style>
+/* ============================================================
+   AZALYST CRYPTO INTELLIGENCE - ETF-MATCHED THEME
+   Synced with Azalyst ETF Intelligence design system
+   ============================================================ */
 
+:root {
+  --bg:             #000;
+  --panel-bg:       #0a0a0a;
+  --card-bg:        #050505;
+  --border-dim:     #111;
+  --border-mid:     #1a1a1a;
+  --border-bright:  #333;
+  --orange:         #ff6600;
+  --orange-dim:     #cc5200;
+  --orange-glow:    #ff9900;
+  --white:          #fff;
+  --text-primary:   #e2e2e2;
+  --text-secondary: #888;
+  --text-muted:     #444;
+  --text-dim:       #555;
+  --green:          #00dd33;
+  --red:            #cc2200;
+  --neu:            #cc7700;
+  --amber:          #ffaa00;
+  --font:           'Courier New', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--orange);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.5;
+  min-width: 1100px;
+  overflow-x: hidden;
+}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+
+/* --- TOPBAR: orange bg with black text, matching ETF --- */
+.topbar, header, #header {
+  background: var(--orange);
+  color: #000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 12px;
+  font-weight: 700;
+  font-size: 13px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  min-height: 38px;
+}
+
+/* --- TABS: orange-dim default, white active --- */
+.tabs, nav.tabbar, .tab-bar { display: flex; gap: 1px; margin-left: 8px; }
+.tab, .tabs button, nav.tabbar button {
+  background: var(--orange-dim);
+  color: #000;
+  padding: 3px 16px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  border: none;
+  font-family: var(--font);
+  transition: background .1s;
+}
+.tab:hover, .tabs button:hover, nav.tabbar button:hover { background: #e06000; }
+.tab.active, .tabs button.active, nav.tabbar button.active {
+  background: var(--white);
+  color: #000;
+}
+
+/* --- BRAND BLOCK --- */
+.brand-block { display: flex; align-items: center; gap: 8px; }
+.brand-mark {
+  background: #000;
+  color: var(--orange);
+  padding: 3px 12px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  font-family: var(--font);
+}
+.brand-sub h1, .brand-title {
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font);
+  letter-spacing: .5px;
+  margin: 0;
+}
+.brand-sub p, .brand-kicker {
+  color: #000;
+  font-size: 8px;
+  font-weight: 400;
+  font-family: var(--font);
+  margin: 0;
+}
+.topbar-meta { margin-left: auto; display: flex; gap: 16px; align-items: center; }
+.status-dot { color: #000; font-size: 11px; font-weight: 700; }
+.status-dot::before { content: "\25CF "; font-size: 10px; animation: blink 1s step-end infinite; }
+.status-dot.good::before { color: #00dd33; }
+.status-dot.warn::before { color: #cc7700; }
+.status-dot.bad::before  { color: #cc2200; }
+.meta-value { color: #000; font-size: 11px; }
+.live-dot { color: #000; font-size: 16px; animation: blink 1s step-end infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* --- TICKER TAPE --- */
+.ticker, .tape {
+  background: #111;
+  padding: 3px 0;
+  overflow: hidden;
+  white-space: nowrap;
+  border-bottom: 1px solid #222;
+  font-size: 11px;
+}
+.ticker-track, .tape-inner {
+  display: inline-flex;
+  gap: 0;
+  will-change: transform;
+  color: var(--orange-glow);
+}
+.ticker-track span { margin-right: 32px; white-space: nowrap; color: var(--orange-glow); }
+
+/* --- MAIN SHELL --- */
+main, .main, .shell {
+  display: grid;
+  gap: 2px;
+  background: var(--border-bright);
+  padding: 2px;
+}
+.grid { display: grid; gap: 8px; }
+.two-col, .grid-2 { grid-template-columns: 1fr 1fr; }
+.hero-grid, .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+.span2 { grid-column: span 2; }
+.span3 { grid-column: span 3; }
+
+/* --- PANELS --- */
+.panel, .card, article.panel {
+  background: var(--panel-bg);
+  padding: 8px 10px;
+  margin-bottom: 0;
+  border: none;
+  overflow: hidden;
+}
+.panel-header, .card-header {
+  color: var(--orange);
+  font-weight: 700;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border-bright);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+}
+.micro-copy, .cmd { color: var(--orange-glow); font-size: 10px; font-weight: 400; }
+
+/* --- PAGE VISIBILITY --- */
+.page, .tab-panel { display: none; }
+.page.active, .tab-panel.active { display: block; }
+
+/* --- STAT CARDS --- */
+.metric-stack, .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 7px; }
+.stat-box, .stat-card, .metric-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-mid);
+  padding: 5px 8px;
+}
+.stat-label, .metric-label, .card-label {
+  color: var(--text-dim);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  font-family: var(--font);
+}
+.stat-val, .stat-value, .metric-value {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 2px 0;
+  color: var(--white);
+  font-family: var(--font);
+}
+.stat-sub, .stat-card small, .metric-sub {
+  font-size: 8px;
+  color: var(--border-bright);
+}
+
+/* --- COLOR SEMANTICS --- */
+.up, .green { color: var(--green); }
+.dn, .red   { color: var(--red); }
+.neu        { color: var(--neu); }
+.amber      { color: var(--amber); }
+
+/* --- TABLES --- */
+table { width: 100%; border-collapse: collapse; font-size: 10px; }
+th {
+  padding: 4px 8px;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border-bright);
+}
+td { padding: 4px 8px; color: var(--text-secondary); border-bottom: 1px solid var(--border-dim); }
+tr:hover td { background: #0d0d0d; }
+
+/* --- LINKS --- */
+a, .action-link { color: var(--orange-glow); text-decoration: none; font-size: 10px; }
+a:hover, .action-link:hover { color: var(--orange); }
+
+/* --- BUTTONS --- */
+button, .btn, .action-btn {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--orange);
+  background: #1a1a0a;
+  color: var(--orange-glow);
+  padding: 2px 10px;
+  transition: all .1s;
+}
+button:hover, .btn:hover, .action-btn:hover { background: var(--orange); color: #000; }
+
+/* --- CODE --- */
+pre, code { font-family: var(--font); font-size: 10px; color: var(--text-secondary); }
+pre {
+  background: var(--card-bg);
+  border: 1px solid var(--border-dim);
+  padding: 8px;
+  overflow-x: auto;
+  line-height: 1.6;
+  color: #888;
+  font-size: 9px;
+}
+
+/* --- FOOTER --- */
+footer, .footer, .statusbar {
+  background: var(--panel-bg);
+  border-top: 1px solid #222;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 10px;
+  font-size: 9px;
+  color: var(--text-muted);
+  gap: 8px;
+}
+.footer-links a { color: var(--orange-glow); margin-left: 12px; text-decoration: none; font-size: 9px; }
+.footer-links a:hover { color: var(--orange); }
+
+/* --- QUOTE ROWS --- */
+.qrow { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #0d0d0d; }
+.qticker { color: var(--orange-glow); font-weight: 700; font-size: 11px; min-width: 80px; }
+.qprice  { color: var(--white); font-size: 11px; min-width: 80px; text-align: right; }
+.qchg    { font-size: 10px; min-width: 60px; text-align: right; }
+
+/* --- SUMMARY --- */
+.summary-box, .hero-copy { color: #888; font-size: 10px; line-height: 1.5; }
+
+/* --- HERO PANEL --- */
+.panel-hero { background: #050505; border: 1px solid #1a1a1a; }
+.hero-title { color: var(--orange); font-size: 12px; font-weight: 700; margin: 4px 0; }
+.hero-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.hero-stack { padding: 4px 0; }
+.kicker { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+
+/* --- RESPONSIVE --- */
+@media (max-width: 900px) {
+  .grid-4, .hero-grid, .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  html, body { min-width: 600px; }
+}
+@media (max-width: 600px) {
+  .two-col, .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  html, body { min-width: 400px; }
+}
+
+
+/* Additional ETF-matched classes for dynamic JS rendering */
+.page { display: none; }
+.page.active { display: block; }
+
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 7px; }
+.stat-box { background: var(--card-bg); border: 1px solid var(--border-mid); padding: 5px 8px; }
+.stat-label { color: var(--text-dim); font-size: 8px; text-transform: uppercase; letter-spacing: .4px; }
+.stat-val { font-size: 15px; font-weight: 700; margin: 2px 0; color: var(--white); }
+.stat-sub { font-size: 8px; color: var(--border-bright); }
+
+.pill { display: inline-block; padding: 2px 8px; font-size: 9px; font-weight: 700; border-radius: 2px; }
+.pill-good { background: #0a1a0a; color: var(--green); border: 1px solid #1a4a1a; }
+.pill-bad { background: #1a0000; color: var(--red); border: 1px solid #550000; }
+.pill-warn { background: #1a1000; color: var(--orange-glow); border: 1px solid #3a2a00; }
+.pill-info { background: #001a2a; color: #0ea5e9; border: 1px solid #003355; }
+.pill-ok { background: #0a1a0a; color: var(--green); border: 1px solid #1a4a1a; }
+.pill-elevated { background: #1a1000; color: var(--orange-glow); border: 1px solid #3a2a00; }
+.pill-high { background: #2a1000; color: var(--orange-glow); border: 1px solid #553300; }
+.pill-extreme { background: #1a0000; color: #ff3333; border: 1px solid #550000; }
+.pill-normal { background: #0a1a0a; color: var(--green); border: 1px solid #1a4a1a; }
+.pill-unknown { background: #0a0a0a; color: var(--text-muted); border: 1px solid #1a1a1a; }
+
+.up, .green, .positive { color: var(--green); }
+.dn, .red, .negative { color: var(--red); }
+.neu, .amber, .warning { color: var(--neu); }
+.info { color: #0ea5e9; }
+.muted { color: var(--text-muted); }
+
+.signal-table { font-size: 10px; }
+.signal-head { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 8px; color: var(--text-dim); border-bottom: 1px solid #222; text-transform: uppercase; }
+.signal-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; border-bottom: 1px solid #0d0d0d; font-size: 10px; color: #888; }
+
+.feature-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid #0d0d0d; font-size: 9px; color: #888; }
+.feature-row span:first-child { min-width: 100px; }
+.feature-row strong { color: var(--orange-glow); min-width: 45px; text-align: right; }
+.bar-rail { flex: 1; height: 6px; background: #111; border-radius: 2px; overflow: hidden; }
+.bar-fill { height: 6px; background: #00aa2a; border-radius: 2px; }
+
+.cluster-card { padding: 6px 0; margin-bottom: 4px; }
+.cluster-card h4 { font-size: 9px; color: var(--orange-glow); margin-bottom: 3px; text-transform: uppercase; }
+.list-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 9px; color: #888; }
+.stack { display: flex; flex-direction: column; gap: 6px; }
+
+.table-head, .source-head { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 8px; color: var(--text-dim); border-bottom: 1px solid #222; text-transform: uppercase; }
+.table-row, .source-row, .file-row { display: flex; justify-content: space-between; padding: 4px 8px; border-bottom: 1px solid #0d0d0d; font-size: 10px; color: #888; }
+.table-row:hover, .source-row:hover, .file-row:hover { background: #0d0d0d; color: #fff; }
+.runtime-link { color: var(--orange-glow); text-decoration: none; }
+.runtime-link:hover { color: var(--orange); }
+
+.meta-list { padding: 4px 0; }
+.meta-line { display: flex; justify-content: space-between; padding: 2px 0; font-size: 9px; color: #888; border-bottom: 1px solid #0d0d0d; }
+.meta-line strong { color: #fff; }
+
+.empty-state { padding: 15px; text-align: center; color: #333; font-size: 10px; }
+
+.summary-box { background: var(--card-bg); border: 1px solid #1a1a1a; padding: 8px; color: #888; font-size: 9px; line-height: 1.5; max-height: 300px; overflow-y: auto; }
+
+.issue-card { padding: 6px 0; border-bottom: 1px solid #1a1a1a; }
+.issue-card h4 { font-size: 9px; color: var(--orange-glow); margin-bottom: 2px; }
+.issue-card p { font-size: 9px; color: #888; line-height: 1.4; }
+
+.hero-title { color: #fff; font-size: 11px; font-weight: 700; margin: 4px 0; }
+.hero-copy { color: #888; font-size: 10px; line-height: 1.5; }
+.hero-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.hero-stack { padding: 4px 0; }
+.kicker { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+a.action-link { color: var(--orange-glow); text-decoration: none; font-size: 10px; background: #1a1a0a; border: 1px solid var(--orange); padding: 3px 10px; font-weight: 700; transition: all .1s; }
+a.action-link:hover { background: var(--orange); color: #000; }
+</style>
+</head>
 <body>
-  <!-- ── Topbar (mirrors ETF Intelligence header) ──────────────────── -->
-  <header class="topbar">
-    <div class="brand-block">
-      <div class="brand-mark">AZALYST</div>
-      <div class="brand-sub">
-        <h1>CRYPTO INTELLIGENCE</h1>
-        <p>Perp scanner · ML signals · Engine consensus</p>
+
+<div class="topbar">
+  <div class="logo">AZALYST<span>CRYPTO INTELLIGENCE</span></div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('MARKET')">MARKET DATA</button>
+    <button class="tab" onclick="switchTab('MODELS')">MODELS</button>
+    <button class="tab" onclick="switchTab('OPS')">OPERATIONS</button>
+  </div>
+  <div class="topbar-right">
+    <span class="live-dot" id="liveDot">●</span>
+    <span id="clockValue" style="color:#000;font-size:11px">--:--:-- IST</span>
+    <span id="dataStatus" style="color:#000;font-size:9px;font-weight:700">● LOADING</span>
+  </div>
+</div>
+
+<div class="tape">
+  <div class="tape-inner" id="tickerTape"><span class="tape-item">Connecting to runtime telemetry...</span></div>
+</div>
+
+<!-- ══ PAGE: MARKET DATA ══ -->
+<div id="page-MARKET" class="page active">
+  <div class="main grid-3">
+
+    <div class="panel">
+      <div class="panel-header">SYSTEM PULSE <span class="cmd" id="repoVisibility">PUBLIC REPO</span></div>
+      <div class="hero-stack">
+        <p class="kicker">Repository</p>
+        <div class="hero-title">gitdhirajs / azalyst-crypto-intelligence</div>
+        <p id="headlineText" class="hero-copy">Waiting for runtime status and model snapshots...</p>
+        <div class="hero-actions">
+          <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank">Repo</a>
+          <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions" target="_blank">Actions</a>
+          <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data" target="_blank">Runtime Data</a>
+          <a class="action-link" href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank">ETF Dashboard ↗</a>
+        </div>
       </div>
     </div>
-    <div class="topbar-meta">
-      <!-- Live status dot — same pattern as ETF "● LIVE / ● OFFLINE" -->
-      <span id="liveStatus" class="status-dot warn">LOADING</span>
-      <span id="clockValue" class="meta-value">--:--:-- IST</span>
+
+    <div class="panel">
+      <div class="panel-header">AUTOMATION <span class="cmd">GITHUB ACTIONS</span></div>
+      <div id="workflowCards" class="stat-grid"></div>
     </div>
-  </header>
 
-  <!-- ── Ticker tape ─────────────────────────────────────────────────── -->
-  <div class="ticker" role="marquee" aria-label="Live scanner data ticker">
-    <div id="tickerTape" class="ticker-track">Connecting to runtime telemetry...</div>
-  </div>
+    <div class="panel">
+      <div class="panel-header">RUNTIME SCAN <span class="cmd" id="runtimeSourceTag">RUNTIME-DATA</span></div>
+      <div id="runtimeStatusCard" class="stat-grid"></div>
+    </div>
 
-  <!-- ── Tab bar (matches ETF style) ──────────────────────────────────── -->
-  <nav class="tabbar" aria-label="Dashboard sections">
-    <button class="tab active" data-tab="overview">Market Data</button>
-    <button class="tab" data-tab="models">Models</button>
-    <button class="tab" data-tab="ops">Operations</button>
-  </nav>
-
-  <!-- ── Main shell ─────────────────────────────────────────────────── -->
-  <main class="shell">
-
-    <!-- ══ OVERVIEW TAB ═══════════════════════════════════════════════ -->
-    <section class="tab-panel active" id="tab-overview">
-
-      <!-- Hero row: 3 columns -->
-      <section class="grid hero-grid">
-
-        <article class="panel panel-hero">
-          <div class="panel-header">
-            <span>System Pulse</span>
-            <span id="repoVisibility" class="micro-copy">PUBLIC REPO</span>
-          </div>
-          <div class="hero-stack">
-            <div>
-              <p class="kicker">Repository</p>
-              <div class="hero-title">gitdhirajs / azalyst-crypto-intelligence</div>
-            </div>
-            <p id="headlineText" class="hero-copy">
-              Waiting for runtime status and model snapshots...
-            </p>
-            <div class="hero-actions">
-              <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank"
-                rel="noreferrer">Repo</a>
-              <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions"
-                target="_blank" rel="noreferrer">Actions</a>
-              <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data"
-                target="_blank" rel="noreferrer">Runtime Data</a>
-              <a class="action-link" href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank"
-                rel="noreferrer">ETF Dashboard ↗</a>
-            </div>
-          </div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-header">
-            <span>Automation</span>
-            <span class="micro-copy">GITHUB ACTIONS</span>
-          </div>
-          <div id="workflowCards" class="metric-stack"></div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-header">
-            <span>Runtime Scan</span>
-            <span id="runtimeSourceTag" class="micro-copy">RUNTIME-DATA</span>
-          </div>
-          <div id="runtimeStatusCard" class="metric-stack"></div>
-        </article>
-
-      </section>
-
-      <!-- Model cards row -->
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Main Scanner Model</span>
-            <span id="mainModelSource" class="micro-copy">BOOTSTRAP</span>
-          </div>
+    <div class="panel span2">
+      <div class="panel-header">MODEL HEALTH <span class="cmd">TRAINING SNAPSHOTS</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <div style="font-size:9px;color:#ff9900;margin-bottom:4px;font-weight:700">MAIN SCANNER MODEL <span class="cmd" id="mainModelSource">BOOTSTRAP</span></div>
           <div id="mainModelCard"></div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-header">
-            <span>Hourly Candle Model</span>
-            <span id="hourlyModelSource" class="micro-copy">BOOTSTRAP</span>
-          </div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:#ff9900;margin-bottom:4px;font-weight:700">HOURLY CANDLE MODEL <span class="cmd" id="hourlyModelSource">BOOTSTRAP</span></div>
           <div id="hourlyModelCard"></div>
-        </article>
-      </section>
+        </div>
+      </div>
+    </div>
 
-      <!-- Signals + summary row -->
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>1H Live Signal Watchlist</span>
-            <span class="micro-copy">TOP CONTINUATION PROBABILITY</span>
-          </div>
-          <div id="hourlySignalsTable"></div>
-        </article>
+    <div class="panel">
+      <div class="panel-header">1H LIVE SIGNAL WATCHLIST <span class="cmd">TOP CONTINUATION</span></div>
+      <div id="hourlySignalsTable"></div>
+    </div>
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Latest Summary</span>
-            <span class="micro-copy">MARKDOWN PREVIEW</span>
-          </div>
-          <pre id="summaryPreview" class="summary-box">Loading summary...</pre>
-        </article>
-      </section>
+    <div class="panel span2">
+      <div class="panel-header">LATEST SUMMARY <span class="cmd">MARKDOWN PREVIEW</span></div>
+      <pre id="summaryPreview" class="summary-box">Loading summary...</pre>
+    </div>
 
-    </section>
+  </div>
+</div>
 
-    <!-- ══ MODELS TAB ════════════════════════════════════════════════ -->
-    <section class="tab-panel" id="tab-models">
+<!-- ══ PAGE: MODELS ══ -->
+<div id="page-MODELS" class="page">
+  <div class="main grid-2">
 
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Main Model Feature Stack</span>
-            <span class="micro-copy">XGBOOST PERMUTATION IMPORTANCE</span>
-          </div>
-          <div id="mainFeatures"></div>
-        </article>
+    <div class="panel">
+      <div class="panel-header">MAIN MODEL FEATURE STACK <span class="cmd">XGBOOST PERMUTATION</span></div>
+      <div id="mainFeatures"></div>
+    </div>
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Hourly Model Feature Stack</span>
-            <span class="micro-copy">PATTERN IMPORTANCE</span>
-          </div>
-          <div id="hourlyFeatures"></div>
-        </article>
-      </section>
+    <div class="panel">
+      <div class="panel-header">HOURLY MODEL FEATURE STACK <span class="cmd">PATTERN IMPORTANCE</span></div>
+      <div id="hourlyFeatures"></div>
+    </div>
 
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Main Scanner Clusters</span>
-            <span class="micro-copy">GAINER / LOSER REGIMES</span>
-          </div>
-          <div id="mainClusters"></div>
-        </article>
+    <div class="panel">
+      <div class="panel-header">MAIN SCANNER CLUSTERS <span class="cmd">GAINER / LOSER REGIMES</span></div>
+      <div id="mainClusters"></div>
+    </div>
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Hourly Pattern Clusters</span>
-            <span class="micro-copy">CONTINUATION / FAILURE</span>
-          </div>
-          <div id="hourlyClusters"></div>
-        </article>
-      </section>
+    <div class="panel">
+      <div class="panel-header">HOURLY PATTERN CLUSTERS <span class="cmd">CONTINUATION / FAILURE</span></div>
+      <div id="hourlyClusters"></div>
+    </div>
 
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Main Scanner Buckets</span>
-            <span class="micro-copy">RANGE LEARNING</span>
-          </div>
-          <div id="mainBuckets"></div>
-        </article>
+    <div class="panel">
+      <div class="panel-header">MAIN SCANNER BUCKETS <span class="cmd">RANGE LEARNING</span></div>
+      <div id="mainBuckets"></div>
+    </div>
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Hourly Continuation Buckets</span>
-            <span class="micro-copy">CANDLE RANGE LEARNING</span>
-          </div>
-          <div id="hourlyBuckets"></div>
-        </article>
-      </section>
+    <div class="panel">
+      <div class="panel-header">HOURLY CONTINUATION BUCKETS <span class="cmd">CANDLE RANGE LEARNING</span></div>
+      <div id="hourlyBuckets"></div>
+    </div>
 
-    </section>
+  </div>
+</div>
 
-    <!-- ══ OPERATIONS TAB ════════════════════════════════════════════ -->
-    <section class="tab-panel" id="tab-ops">
+<!-- ══ PAGE: OPERATIONS ══ -->
+<div id="page-OPS" class="page">
+  <div class="main grid-2">
 
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Recent Workflow Runs</span>
-            <span class="micro-copy">LATEST 8</span>
-          </div>
-          <div id="workflowTable"></div>
-        </article>
+    <div class="panel">
+      <div class="panel-header">RECENT WORKFLOW RUNS <span class="cmd">LATEST 8</span></div>
+      <div id="workflowTable"></div>
+    </div>
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Data Sources</span>
-            <span class="micro-copy">MERGED VIEW</span>
-          </div>
-          <div id="sourceMatrix"></div>
-        </article>
-      </section>
+    <div class="panel">
+      <div class="panel-header">DATA SOURCES <span class="cmd">MERGED VIEW</span></div>
+      <div id="sourceMatrix"></div>
+    </div>
 
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Runtime Branch Files</span>
-            <span class="micro-copy">REPORTS DIRECTORY</span>
-          </div>
-          <div id="runtimeFiles"></div>
-        </article>
+    <div class="panel">
+      <div class="panel-header">RUNTIME BRANCH FILES <span class="cmd">REPORTS DIRECTORY</span></div>
+      <div id="runtimeFiles"></div>
+    </div>
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Known Issues</span>
-            <span class="micro-copy">OPS NOTES</span>
-          </div>
-          <div id="issuesPanel"></div>
-        </article>
-      </section>
+    <div class="panel">
+      <div class="panel-header">KNOWN ISSUES <span class="cmd">OPS NOTES</span></div>
+      <div id="issuesPanel"></div>
+    </div>
 
-    </section>
+  </div>
+</div>
 
-  </main>
+<div class="statusbar">
+  <span id="footerStatus">Waiting for data...</span>
+  <span class="footer-links">
+    <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank">Source</a>
+    <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions" target="_blank">Runs</a>
+    <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data" target="_blank">Artifacts</a>
+    <a href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank">ETF Dashboard ↗</a>
+  </span>
+</div>
 
-  <!-- ── Footer (matches ETF style) ───────────────────────────────── -->
-  <footer class="footer">
-    <span id="footerStatus">Waiting for data...</span>
-    <span class="footer-links">
-      <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank" rel="noreferrer">Source</a>
-      <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions" target="_blank"
-        rel="noreferrer">Runs</a>
-      <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data" target="_blank"
-        rel="noreferrer">Artifacts</a>
-      <a href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank" rel="noreferrer">ETF Dashboard
-        ↗</a>
-    </span>
-  </footer>
-
-  <script type="module" src="https://cdn.jsdelivr.net/gh/gitdhirajs/Azalyst-Crypto-Intelligence@main/app.js"></script>
+<script src="app.js"></script>
 </body>
-
 </html>
