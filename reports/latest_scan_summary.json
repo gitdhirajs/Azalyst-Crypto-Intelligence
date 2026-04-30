@@ -1,17 +1,17 @@
 {
-  "timestamp": "2026-04-30T07:22:20.590718+00:00",
+  "timestamp": "2026-04-30T12:04:54.998846+00:00",
   "status": "healthy",
-  "symbols_attempted": 81,
-  "symbols_scanned": 81,
+  "symbols_attempted": 82,
+  "symbols_scanned": 82,
   "symbols_failed": 0,
   "min_volume_24h_usdt": 5000000.0,
   "request_errors": {
-    "count": 81,
+    "count": 82,
     "status_counts": {
-      "400": 81
+      "400": 82
     },
     "endpoint_counts": {
-      "okx_oi_history": 81
+      "okx_oi_history": 82
     },
     "examples": [
       {
@@ -38,15 +38,15 @@
       {
         "endpoint": "okx_oi_history",
         "status_code": 400,
-        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=DOGE-USDT-SWAP&period=5m&limit=12",
-        "symbol": "DOGEUSDT",
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SKYAI-USDT-SWAP&period=5m&limit=12",
+        "symbol": "SKYAIUSDT",
         "period": "5m"
       },
       {
         "endpoint": "okx_oi_history",
         "status_code": 400,
-        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SKYAI-USDT-SWAP&period=5m&limit=12",
-        "symbol": "SKYAIUSDT",
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=DOGE-USDT-SWAP&period=5m&limit=12",
+        "symbol": "DOGEUSDT",
         "period": "5m"
       },
       {
@@ -59,15 +59,15 @@
       {
         "endpoint": "okx_oi_history",
         "status_code": 400,
-        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=XRP-USDT-SWAP&period=5m&limit=12",
-        "symbol": "XRPUSDT",
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=BSB-USDT-SWAP&period=5m&limit=12",
+        "symbol": "BSBUSDT",
         "period": "5m"
       },
       {
         "endpoint": "okx_oi_history",
         "status_code": 400,
-        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=BSB-USDT-SWAP&period=5m&limit=12",
-        "symbol": "BSBUSDT",
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=XRP-USDT-SWAP&period=5m&limit=12",
+        "symbol": "XRPUSDT",
         "period": "5m"
       }
     ]
