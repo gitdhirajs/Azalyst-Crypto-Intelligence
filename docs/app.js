@@ -162,9 +162,23 @@ async function fetchJSON(url) {
 async function getRuntimeData() {
   const isLocal = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   
+  // Auto-detect repo if on GitHub Pages
+  const pathParts = window.location.pathname.split('/').filter(p => p);
+  const isGitHubPages = window.location.hostname.includes("github.io");
+  let owner = CONFIG.owner;
+  let repoName = CONFIG.repo;
+
+  if (isGitHubPages && pathParts.length >= 1) {
+    owner = window.location.hostname.split('.')[0];
+    repoName = pathParts[0];
+  }
+
   // If local, try to fetch from the local reports directory first
   if (isLocal) {
     console.log("Local environment detected, fetching from local reports/");
+    const payload = await fetchJSON('../reports/latest_dashboard_payload.json');
+    if (payload) return payload;
+    
     const fused = await fetchJSON('../reports/latest_fused_signals.json');
     if (fused) {
         return { 
@@ -175,9 +189,8 @@ async function getRuntimeData() {
   }
 
   // Fallback to GitHub API (Production/Remote)
-  const repo = "gitdhirajs/Azalyst-Crypto-Intelligence";
   const branch = "runtime-data";
-  const url = `https://api.github.com/repos/${repo}/contents/reports/latest_dashboard_payload.json?ref=${branch}`;
+  const url = `https://api.github.com/repos/${owner}/${repoName}/contents/reports/latest_dashboard_payload.json?ref=${branch}`;
   
   const data = await fetchJSON(url);
   if (data?.content) {
@@ -745,16 +758,34 @@ function renderShell(repo, payload, runs, runtimeFiles, bootstrap, runtimePayloa
 }
 
 async function loadDashboard() {
+  // Auto-detect repo
+  const pathParts = window.location.pathname.split('/').filter(p => p);
+  const isGitHubPages = window.location.hostname.includes("github.io");
+  let owner = CONFIG.owner;
+  let repoName = CONFIG.repo;
+
+  if (isGitHubPages && pathParts.length >= 1) {
+    owner = window.location.hostname.split('.')[0];
+    repoName = pathParts[0];
+  }
+  
+  const apiBase = `https://api.github.com/repos/${owner}/${repoName}`;
+
   const [bootstrap, runtimePayload, workflowResponse, repo, runtimeFiles] = await Promise.all([
     fetchJSON(CONFIG.bootstrapUrl),
-    fetchRepoJson("reports/latest_dashboard_payload.json", CONFIG.runtimeRef),
-    fetchJSON(`${API_BASE}/actions/runs?per_page=8`),
-    fetchJSON(API_BASE),
+    getRuntimeData(),
+    fetchJSON(`${apiBase}/actions/runs?per_page=8`),
+    fetchJSON(apiBase),
     fetchRepoListing("reports", CONFIG.runtimeRef),
   ]);
 
   const runs = workflowResponse?.workflow_runs || [];
   const payload = mergePayloads(bootstrap, runtimePayload);
+  
+  if (repo) {
+      document.querySelectorAll(".hero-title").forEach(el => el.textContent = repo.full_name);
+  }
+
   renderShell(repo, payload, runs, runtimeFiles, bootstrap, runtimePayload);
 }
 

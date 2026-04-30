@@ -31,6 +31,7 @@ from src.config import (
 from src.collector import scan_symbol, get_active_symbols
 from src.features import run_feature_pipeline
 from src.trainer import train_model, predict_current
+from src.pipeline import write_runtime_payload, save_live_signals
 
 console = Console()
 SCAN_COUNT = 0
@@ -306,6 +307,10 @@ def main():
 
                 # 4. Display results
                 display_scan_table(scan_df)
+
+                # 5. Update dashboard JSON payloads
+                save_live_signals(scan_df)
+                write_runtime_payload(scan_signals=scan_df)
 
             # 5. Wait for next cycle
             if RUNNING:

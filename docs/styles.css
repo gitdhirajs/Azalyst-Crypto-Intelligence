@@ -591,3 +591,41 @@ body {
 
   .ticker-track { animation-duration: 38s; }
 }
+/* ── Edu Frames ── */
+.edu-frame-container {
+  margin-top: 8px;
+  border-top: 1px solid #111;
+  padding-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.edu-title {
+  font-size: 9px;
+  color: #444;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.edu-thumb {
+  width: 100%;
+  max-height: 250px;
+  object-fit: cover;
+  border: 1px solid #1a1a1a;
+  filter: grayscale(0.4) contrast(1.1);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.edu-thumb:hover {
+  filter: grayscale(0) contrast(1.2);
+  border-color: #ff6600;
+}
+
+.edu-caption {
+  font-size: 9px;
+  color: #666;
+  font-style: italic;
+  margin-top: 4px;
+}

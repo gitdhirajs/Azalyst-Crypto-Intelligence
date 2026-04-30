@@ -33,6 +33,7 @@ class FusedCryptoSignal:
     ml_probability: Optional[float] = None
     ml_direction: Optional[str] = None
     summary: str = ""
+    edu_frame: Optional[str] = None
     metrics: Dict[str, float] = field(default_factory=dict)
 
     def to_dict(self) -> Dict:
@@ -48,6 +49,7 @@ class FusedCryptoSignal:
             "ml_probability": self.ml_probability,
             "ml_direction": self.ml_direction,
             "summary": self.summary,
+            "edu_frame": self.edu_frame,
             "reasons": [{"engine": c.engine, "direction": c.direction,
                          "strength": c.strength, "reason": c.reason}
                         for c in self.cards],

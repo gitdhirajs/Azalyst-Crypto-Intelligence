@@ -374,7 +374,10 @@ def _fetch_klines_kucoin(symbol: str, interval: str, limit: int) -> Optional[pd.
         rows = data.get("data") if data else []
         if not rows:
             return None
-        df = pd.DataFrame(rows, columns=["open_time", "open", "high", "low", "close", "volume"])
+        # KuCoin returns [timestamp, open, close, high, low, volume, turnover]
+        # Previous versions had 6 columns; v2.1 handles the new turnover column.
+        cols = ["open_time", "open", "close", "high", "low", "volume", "turnover"]
+        df = pd.DataFrame(rows, columns=cols[:len(rows[0])])
         for c in ("open", "high", "low", "close", "volume"):
             df[c] = df[c].astype(float)
         df["open_time"] = pd.to_datetime(df["open_time"].astype("int64"), unit="ms", utc=True)

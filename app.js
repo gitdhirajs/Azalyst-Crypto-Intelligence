@@ -4,6 +4,7 @@ const CONFIG = {
   runtimeRef: "runtime-data",
   refreshMs: 5 * 60 * 1000,
   bootstrapUrl: "./data/bootstrap.json",
+  localPayloadUrl: "./reports/latest_dashboard_payload.json",
 };
 
 const API_BASE = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}`;
@@ -569,16 +570,28 @@ function initTabs() {
 
 // ── Data loading ─────────────────────────────────────────────────────
 async function loadDashboard() {
-  const [bootstrap, runtimePayload, workflowResponse, repo, runtimeFiles] = await Promise.all([
+  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.protocol === "file:";
+  
+  const [bootstrap, localPayload, runtimePayload, workflowResponse, repo, runtimeFiles] = await Promise.all([
     fetchJson(CONFIG.bootstrapUrl),
+    isLocal ? fetchJson(CONFIG.localPayloadUrl) : Promise.resolve(null),
     fetchRepoJson("reports/latest_dashboard_payload.json", CONFIG.runtimeRef),
     fetchJson(`${API_BASE}/actions/runs?per_page=8`),
     fetchJson(API_BASE),
     fetchRepoListing("reports", CONFIG.runtimeRef),
   ]);
+  
   const runs    = workflowResponse?.workflow_runs || [];
-  const payload = mergePayloads(bootstrap, runtimePayload);
-  renderShell(repo, payload, runs, runtimeFiles, bootstrap, runtimePayload);
+  // Priority: Local payload > GitHub runtime payload > Bootstrap
+  const payload = mergePayloads(bootstrap, localPayload || runtimePayload);
+  
+  // Update source label if local was used
+  if (localPayload) {
+      payload.runtime_status.scanner = payload.runtime_status.scanner || {};
+      payload.runtime_status.scanner.headline = (payload.runtime_status.scanner.headline || "") + " (Local Data)";
+  }
+
+  renderShell(repo, payload, runs, runtimeFiles, bootstrap, localPayload || runtimePayload);
 }
 
 // ── Bootstrap ────────────────────────────────────────────────────────

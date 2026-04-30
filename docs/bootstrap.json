@@ -1,0 +1,14 @@
+{
+  "project_name": "Azalyst v7 Crypto Scanner",
+  "version": "7.0.0 Institutional",
+  "status": "ready",
+  "last_updated": "2026-04-29T22:54:00Z",
+  "models": [
+    {
+      "id": "hourly_continuation",
+      "name": "Hourly Trend Continuation",
+      "target": "Price Continuation @ 1.5%",
+      "status": "active"
+    }
+  ]
+}
