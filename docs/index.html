@@ -6,361 +6,127 @@
 <title>Azalyst Crypto Intelligence</title>
 <meta name="theme-color" content="#ff6600">
 <style>
-/* ============================================================
-   AZALYST CRYPTO INTELLIGENCE - ETF-MATCHED THEME
-   Synced with Azalyst ETF Intelligence design system
-   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:13px}
+body{background:#000;font-family:'Courier New',monospace;color:#ff6600;overflow-x:hidden;min-width:1100px}
 
-:root {
-  --bg:             #000;
-  --panel-bg:       #0a0a0a;
-  --card-bg:        #050505;
-  --border-dim:     #111;
-  --border-mid:     #1a1a1a;
-  --border-bright:  #333;
-  --orange:         #ff6600;
-  --orange-dim:     #cc5200;
-  --orange-glow:    #ff9900;
-  --white:          #fff;
-  --text-primary:   #e2e2e2;
-  --text-secondary: #888;
-  --text-muted:     #444;
-  --text-dim:       #555;
-  --green:          #00dd33;
-  --red:            #cc2200;
-  --neu:            #cc7700;
-  --amber:          #ffaa00;
-  --font:           'Courier New', monospace;
-}
+/* ── TOP BAR ── */
+.topbar{background:#ff6600;color:#000;display:flex;align-items:center;gap:12px;padding:5px 12px;font-weight:700;font-size:13px;position:sticky;top:0;z-index:100}
+.logo{background:#000;color:#ff6600;padding:3px 12px;font-size:15px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+.logo span{color:#fff;font-size:10px;font-weight:400;margin-left:5px}
+.tabs{display:flex;gap:1px;margin-left:8px}
+.tab{background:#cc5200;color:#000;padding:3px 16px;cursor:pointer;font-size:11px;font-weight:700;border:none;font-family:'Courier New',monospace;transition:background .1s}
+.tab:hover{background:#e06000}
+.tab.active{background:#fff;color:#000}
+.topbar-right{margin-left:auto;display:flex;gap:16px;font-size:11px;align-items:center;white-space:nowrap}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── STATUS DOT ── */
+.status-dot{color:#000;font-size:11px;font-weight:700}
+.status-dot::before{content:"\25CF ";font-size:10px;animation:blink 1s step-end infinite}
+.status-dot.good::before,.status-dot.live::before{color:#00dd33}
+.status-dot.warn::before{color:#cc7700}
+.status-dot.bad::before,.status-dot.dead::before{color:#cc2200}
+.meta-value{color:#000;font-size:11px}
+@keyframes blink{50%{opacity:0}}
 
-html, body {
-  background: var(--bg);
-  color: var(--orange);
-  font-family: var(--font);
-  font-size: 13px;
-  line-height: 1.5;
-  min-width: 1100px;
-  overflow-x: hidden;
-}
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+/* ── TICKER TAPE ── */
+.tape{background:#111;padding:3px 0;overflow:hidden;white-space:nowrap;border-bottom:1px solid #222;font-size:11px}
+.tape-inner{display:inline-flex;gap:0;will-change:transform}
+.tape-inner span{margin-right:32px;white-space:nowrap;color:#ff9900}
 
-/* --- TOPBAR: orange bg with black text, matching ETF --- */
-.topbar, header, #header {
-  background: var(--orange);
-  color: #000;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 5px 12px;
-  font-weight: 700;
-  font-size: 13px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  min-height: 38px;
-}
+/* ── MAIN GRID ── */
+.main{display:grid;gap:2px;background:#333;padding:2px}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-1{grid-template-columns:1fr}
+.panel{background:#0a0a0a;padding:8px 10px}
+.panel-header{color:#ff6600;font-weight:700;font-size:11px;border-bottom:1px solid #333;padding-bottom:4px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.cmd{color:#ffaa00;font-size:10px}
+.span2{grid-column:span 2}
+.span3{grid-column:span 3}
 
-/* --- TABS: orange-dim default, white active --- */
-.tabs, nav.tabbar, .tab-bar { display: flex; gap: 1px; margin-left: 8px; }
-.tab, .tabs button, nav.tabbar button {
-  background: var(--orange-dim);
-  color: #000;
-  padding: 3px 16px;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  border: none;
-  font-family: var(--font);
-  transition: background .1s;
-}
-.tab:hover, .tabs button:hover, nav.tabbar button:hover { background: #e06000; }
-.tab.active, .tabs button.active, nav.tabbar button.active {
-  background: var(--white);
-  color: #000;
-}
+/* ── STAT BOXES ── */
+.stat-grid,.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:7px}
+.stat-box,.metric-card{background:#050505;border:1px solid #1a1a1a;padding:5px 8px}
+.stat-label,.metric-label,.card-label{color:#555;font-size:8px;text-transform:uppercase;letter-spacing:.4px}
+.stat-val,.stat-value,.metric-value{font-size:15px;font-weight:700;margin:2px 0;color:#fff}
+.stat-sub,.metric-subtle{font-size:8px;color:#333}
 
-/* --- BRAND BLOCK --- */
-.brand-block { display: flex; align-items: center; gap: 8px; }
-.brand-mark {
-  background: #000;
-  color: var(--orange);
-  padding: 3px 12px;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: .5px;
-  font-family: var(--font);
-}
-.brand-sub h1, .brand-title {
-  color: #000;
-  font-size: 10px;
-  font-weight: 700;
-  font-family: var(--font);
-  letter-spacing: .5px;
-  margin: 0;
-}
-.brand-sub p, .brand-kicker {
-  color: #000;
-  font-size: 8px;
-  font-weight: 400;
-  font-family: var(--font);
-  margin: 0;
-}
-.topbar-meta { margin-left: auto; display: flex; gap: 16px; align-items: center; }
-.status-dot { color: #000; font-size: 11px; font-weight: 700; }
-.status-dot::before { content: "\25CF "; font-size: 10px; animation: blink 1s step-end infinite; }
-.status-dot.good::before { color: #00dd33; }
-.status-dot.warn::before { color: #cc7700; }
-.status-dot.bad::before  { color: #cc2200; }
-.meta-value { color: #000; font-size: 11px; }
-.live-dot { color: #000; font-size: 16px; animation: blink 1s step-end infinite; }
-@keyframes blink { 50% { opacity: 0; } }
+/* ── META LIST ── */
+.meta-list{padding:4px 0}
+.meta-line{display:flex;justify-content:space-between;padding:2px 0;font-size:9px;color:#888;border-bottom:1px solid #0d0d0d}
+.meta-line strong{color:#fff}
 
-/* --- TICKER TAPE --- */
-.ticker, .tape {
-  background: #111;
-  padding: 3px 0;
-  overflow: hidden;
-  white-space: nowrap;
-  border-bottom: 1px solid #222;
-  font-size: 11px;
-}
-.ticker-track, .tape-inner {
-  display: inline-flex;
-  gap: 0;
-  will-change: transform;
-  color: var(--orange-glow);
-}
-.ticker-track span { margin-right: 32px; white-space: nowrap; color: var(--orange-glow); }
+/* ── SIGNAL / TABLE ROWS ── */
+.signal-table,.table,.source-table,.file-list{font-size:10px}
+.signal-head,.table-head,.source-head{display:flex;justify-content:space-between;padding:4px 8px;font-size:8px;color:#555;border-bottom:1px solid #222;text-transform:uppercase}
+.signal-row,.table-row,.source-row,.file-row{display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-bottom:1px solid #0d0d0d;font-size:10px;color:#888}
+.signal-row:hover,.table-row:hover,.source-row:hover,.file-row:hover{background:#0d0d0d;color:#fff}
+.runtime-link{color:#ff9900;text-decoration:none}
+.runtime-link:hover{color:#ff6600}
 
-/* --- MAIN SHELL --- */
-main, .main, .shell {
-  display: grid;
-  gap: 2px;
-  background: var(--border-bright);
-  padding: 2px;
-}
-.grid { display: grid; gap: 8px; }
-.two-col, .grid-2 { grid-template-columns: 1fr 1fr; }
-.hero-grid, .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
-.grid-4 { grid-template-columns: repeat(4, 1fr); }
-.span2 { grid-column: span 2; }
-.span3 { grid-column: span 3; }
+/* ── FEATURE BARS ── */
+.feature-row{display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #0d0d0d;font-size:9px;color:#888}
+.feature-row span:first-child{min-width:100px}
+.feature-row strong{color:#ff9900;min-width:45px;text-align:right}
+.bar-rail{flex:1;height:6px;background:#111;border-radius:2px;overflow:hidden}
+.bar-fill{height:6px;background:#00aa2a;border-radius:2px}
 
-/* --- PANELS --- */
-.panel, .card, article.panel {
-  background: var(--panel-bg);
-  padding: 8px 10px;
-  margin-bottom: 0;
-  border: none;
-  overflow: hidden;
-}
-.panel-header, .card-header {
-  color: var(--orange);
-  font-weight: 700;
-  font-size: 11px;
-  border-bottom: 1px solid var(--border-bright);
-  padding-bottom: 4px;
-  margin-bottom: 6px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: transparent;
-}
-.micro-copy, .cmd { color: var(--orange-glow); font-size: 10px; font-weight: 400; }
+/* ── CLUSTER / BUCKET CARDS ── */
+.cluster-card{padding:6px 0;margin-bottom:4px}
+.cluster-card h4{font-size:9px;color:#ff9900;margin-bottom:3px;text-transform:uppercase}
+.list-row{display:flex;justify-content:space-between;padding:2px 0;font-size:9px;color:#888}
+.stack{display:flex;flex-direction:column;gap:6px}
 
-/* --- PAGE VISIBILITY --- */
-.page, .tab-panel { display: none; }
-.page.active, .tab-panel.active { display: block; }
+/* ── PILLS ── */
+.pill{display:inline-block;padding:2px 8px;font-size:9px;font-weight:700;border-radius:2px}
+.pill-good,.pill-ok,.pill-normal{background:#0a1a0a;color:#00ff41;border:1px solid #1a4a1a}
+.pill-warn,.pill-elevated{background:#1a1000;color:#ff9900;border:1px solid #3a2a00}
+.pill-bad,.pill-unknown{background:#1a0000;color:#ff4444;border:1px solid #3a0000}
+.pill-info{background:#001a2a;color:#0ea5e9;border:1px solid #003355}
+.pill-high{background:#2a1000;color:#ff6600;border:1px solid #553300}
+.pill-extreme{background:#1a0000;color:#ff3333;border:1px solid #550000}
 
-/* --- STAT CARDS --- */
-.metric-stack, .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 7px; }
-.stat-box, .stat-card, .metric-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-mid);
-  padding: 5px 8px;
-}
-.stat-label, .metric-label, .card-label {
-  color: var(--text-dim);
-  font-size: 8px;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-  font-family: var(--font);
-}
-.stat-val, .stat-value, .metric-value {
-  font-size: 15px;
-  font-weight: 700;
-  margin: 2px 0;
-  color: var(--white);
-  font-family: var(--font);
-}
-.stat-sub, .stat-card small, .metric-sub {
-  font-size: 8px;
-  color: var(--border-bright);
-}
+/* ── COLORS ── */
+.up,.green,.positive{color:#00dd33}
+.dn,.red,.negative{color:#cc2200}
+.neu,.warning{color:#cc7700}
+.amber{color:#ffaa00}
+.muted{color:#444}
+.info{color:#0ea5e9}
 
-/* --- COLOR SEMANTICS --- */
-.up, .green { color: var(--green); }
-.dn, .red   { color: var(--red); }
-.neu        { color: var(--neu); }
-.amber      { color: var(--amber); }
+/* ── CODE / PRE ── */
+pre.summary-box{background:#050505;border:1px solid #1a1a1a;padding:8px;color:#888;font-size:9px;line-height:1.5;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
 
-/* --- TABLES --- */
-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-th {
-  padding: 4px 8px;
-  font-size: 8px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  text-align: left;
-  border-bottom: 1px solid var(--border-bright);
-}
-td { padding: 4px 8px; color: var(--text-secondary); border-bottom: 1px solid var(--border-dim); }
-tr:hover td { background: #0d0d0d; }
+/* ── HERO ── */
+.hero-stack{padding:4px 0}
+.hero-title{color:#fff;font-size:11px;font-weight:700;margin:4px 0}
+.hero-copy{color:#888;font-size:10px;line-height:1.5}
+.hero-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.kicker{font-size:9px;color:#555;text-transform:uppercase}
+a.action-link{color:#ff9900;text-decoration:none;font-size:10px;background:#1a1a0a;border:1px solid #ff6600;padding:3px 10px;font-weight:700;transition:all .1s;display:inline-block}
+a.action-link:hover{background:#ff6600;color:#000}
 
-/* --- LINKS --- */
-a, .action-link { color: var(--orange-glow); text-decoration: none; font-size: 10px; }
-a:hover, .action-link:hover { color: var(--orange); }
+/* ── ISSUE CARD ── */
+.issue-card{padding:6px 0;border-bottom:1px solid #1a1a1a}
+.issue-card h4{font-size:9px;color:#ff9900;margin-bottom:2px}
+.issue-card p{font-size:9px;color:#888;line-height:1.4}
 
-/* --- BUTTONS --- */
-button, .btn, .action-btn {
-  font-family: var(--font);
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  border: 1px solid var(--orange);
-  background: #1a1a0a;
-  color: var(--orange-glow);
-  padding: 2px 10px;
-  transition: all .1s;
-}
-button:hover, .btn:hover, .action-btn:hover { background: var(--orange); color: #000; }
+/* ── STATUS BAR ── */
+.statusbar{background:#0a0a0a;border-top:1px solid #222;display:flex;justify-content:space-between;align-items:center;padding:3px 10px;font-size:9px;color:#444;gap:8px}
+.footer-links a{color:#ff9900;margin-left:12px;text-decoration:none;font-size:9px}
+.footer-links a:hover{color:#ff6600}
 
-/* --- CODE --- */
-pre, code { font-family: var(--font); font-size: 10px; color: var(--text-secondary); }
-pre {
-  background: var(--card-bg);
-  border: 1px solid var(--border-dim);
-  padding: 8px;
-  overflow-x: auto;
-  line-height: 1.6;
-  color: #888;
-  font-size: 9px;
-}
+/* ── PAGE VISIBILITY ── */
+.page{display:none}
+.page.active{display:block}
 
-/* --- FOOTER --- */
-footer, .footer, .statusbar {
-  background: var(--panel-bg);
-  border-top: 1px solid #222;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 3px 10px;
-  font-size: 9px;
-  color: var(--text-muted);
-  gap: 8px;
-}
-.footer-links a { color: var(--orange-glow); margin-left: 12px; text-decoration: none; font-size: 9px; }
-.footer-links a:hover { color: var(--orange); }
+/* ── EMPTY STATE ── */
+.empty-state{padding:15px;text-align:center;color:#333;font-size:10px}
 
-/* --- QUOTE ROWS --- */
-.qrow { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #0d0d0d; }
-.qticker { color: var(--orange-glow); font-weight: 700; font-size: 11px; min-width: 80px; }
-.qprice  { color: var(--white); font-size: 11px; min-width: 80px; text-align: right; }
-.qchg    { font-size: 10px; min-width: 60px; text-align: right; }
-
-/* --- SUMMARY --- */
-.summary-box, .hero-copy { color: #888; font-size: 10px; line-height: 1.5; }
-
-/* --- HERO PANEL --- */
-.panel-hero { background: #050505; border: 1px solid #1a1a1a; }
-.hero-title { color: var(--orange); font-size: 12px; font-weight: 700; margin: 4px 0; }
-.hero-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-.hero-stack { padding: 4px 0; }
-.kicker { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
-
-/* --- RESPONSIVE --- */
-@media (max-width: 900px) {
-  .grid-4, .hero-grid, .grid-3 { grid-template-columns: repeat(2, 1fr); }
-  html, body { min-width: 600px; }
-}
-@media (max-width: 600px) {
-  .two-col, .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-  html, body { min-width: 400px; }
-}
-
-
-/* Additional ETF-matched classes for dynamic JS rendering */
-.page { display: none; }
-.page.active { display: block; }
-
-.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 7px; }
-.stat-box { background: var(--card-bg); border: 1px solid var(--border-mid); padding: 5px 8px; }
-.stat-label { color: var(--text-dim); font-size: 8px; text-transform: uppercase; letter-spacing: .4px; }
-.stat-val { font-size: 15px; font-weight: 700; margin: 2px 0; color: var(--white); }
-.stat-sub { font-size: 8px; color: var(--border-bright); }
-
-.pill { display: inline-block; padding: 2px 8px; font-size: 9px; font-weight: 700; border-radius: 2px; }
-.pill-good { background: #0a1a0a; color: var(--green); border: 1px solid #1a4a1a; }
-.pill-bad { background: #1a0000; color: var(--red); border: 1px solid #550000; }
-.pill-warn { background: #1a1000; color: var(--orange-glow); border: 1px solid #3a2a00; }
-.pill-info { background: #001a2a; color: #0ea5e9; border: 1px solid #003355; }
-.pill-ok { background: #0a1a0a; color: var(--green); border: 1px solid #1a4a1a; }
-.pill-elevated { background: #1a1000; color: var(--orange-glow); border: 1px solid #3a2a00; }
-.pill-high { background: #2a1000; color: var(--orange-glow); border: 1px solid #553300; }
-.pill-extreme { background: #1a0000; color: #ff3333; border: 1px solid #550000; }
-.pill-normal { background: #0a1a0a; color: var(--green); border: 1px solid #1a4a1a; }
-.pill-unknown { background: #0a0a0a; color: var(--text-muted); border: 1px solid #1a1a1a; }
-
-.up, .green, .positive { color: var(--green); }
-.dn, .red, .negative { color: var(--red); }
-.neu, .amber, .warning { color: var(--neu); }
-.info { color: #0ea5e9; }
-.muted { color: var(--text-muted); }
-
-.signal-table { font-size: 10px; }
-.signal-head { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 8px; color: var(--text-dim); border-bottom: 1px solid #222; text-transform: uppercase; }
-.signal-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; border-bottom: 1px solid #0d0d0d; font-size: 10px; color: #888; }
-
-.feature-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid #0d0d0d; font-size: 9px; color: #888; }
-.feature-row span:first-child { min-width: 100px; }
-.feature-row strong { color: var(--orange-glow); min-width: 45px; text-align: right; }
-.bar-rail { flex: 1; height: 6px; background: #111; border-radius: 2px; overflow: hidden; }
-.bar-fill { height: 6px; background: #00aa2a; border-radius: 2px; }
-
-.cluster-card { padding: 6px 0; margin-bottom: 4px; }
-.cluster-card h4 { font-size: 9px; color: var(--orange-glow); margin-bottom: 3px; text-transform: uppercase; }
-.list-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 9px; color: #888; }
-.stack { display: flex; flex-direction: column; gap: 6px; }
-
-.table-head, .source-head { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 8px; color: var(--text-dim); border-bottom: 1px solid #222; text-transform: uppercase; }
-.table-row, .source-row, .file-row { display: flex; justify-content: space-between; padding: 4px 8px; border-bottom: 1px solid #0d0d0d; font-size: 10px; color: #888; }
-.table-row:hover, .source-row:hover, .file-row:hover { background: #0d0d0d; color: #fff; }
-.runtime-link { color: var(--orange-glow); text-decoration: none; }
-.runtime-link:hover { color: var(--orange); }
-
-.meta-list { padding: 4px 0; }
-.meta-line { display: flex; justify-content: space-between; padding: 2px 0; font-size: 9px; color: #888; border-bottom: 1px solid #0d0d0d; }
-.meta-line strong { color: #fff; }
-
-.empty-state { padding: 15px; text-align: center; color: #333; font-size: 10px; }
-
-.summary-box { background: var(--card-bg); border: 1px solid #1a1a1a; padding: 8px; color: #888; font-size: 9px; line-height: 1.5; max-height: 300px; overflow-y: auto; }
-
-.issue-card { padding: 6px 0; border-bottom: 1px solid #1a1a1a; }
-.issue-card h4 { font-size: 9px; color: var(--orange-glow); margin-bottom: 2px; }
-.issue-card p { font-size: 9px; color: #888; line-height: 1.4; }
-
-.hero-title { color: #fff; font-size: 11px; font-weight: 700; margin: 4px 0; }
-.hero-copy { color: #888; font-size: 10px; line-height: 1.5; }
-.hero-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-.hero-stack { padding: 4px 0; }
-.kicker { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
-a.action-link { color: var(--orange-glow); text-decoration: none; font-size: 10px; background: #1a1a0a; border: 1px solid var(--orange); padding: 3px 10px; font-weight: 700; transition: all .1s; }
-a.action-link:hover { background: var(--orange); color: #000; }
+/* ── RESPONSIVE ── */
+@media(max-width:900px){.grid-3{grid-template-columns:1fr 1fr}html,body{min-width:600px}}
+@media(max-width:600px){.grid-2,.grid-3{grid-template-columns:1fr}html,body{min-width:400px}}
 </style>
 </head>
 <body>
@@ -373,14 +139,13 @@ a.action-link:hover { background: var(--orange); color: #000; }
     <button class="tab" onclick="switchTab('OPS')">OPERATIONS</button>
   </div>
   <div class="topbar-right">
-    <span class="live-dot" id="liveDot">●</span>
-    <span id="clockValue" style="color:#000;font-size:11px">--:--:-- IST</span>
-    <span id="dataStatus" style="color:#000;font-size:9px;font-weight:700">● LOADING</span>
+    <span id="liveStatus" class="status-dot warn">LOADING</span>
+    <span id="clockValue" class="meta-value">--:--:-- IST</span>
   </div>
 </div>
 
 <div class="tape">
-  <div class="tape-inner" id="tickerTape"><span class="tape-item">Connecting to runtime telemetry...</span></div>
+  <div class="tape-inner" id="tickerTape"><span>Connecting to runtime telemetry...</span></div>
 </div>
 
 <!-- ══ PAGE: MARKET DATA ══ -->
@@ -394,10 +159,10 @@ a.action-link:hover { background: var(--orange); color: #000; }
         <div class="hero-title">gitdhirajs / azalyst-crypto-intelligence</div>
         <p id="headlineText" class="hero-copy">Waiting for runtime status and model snapshots...</p>
         <div class="hero-actions">
-          <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank">Repo</a>
-          <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions" target="_blank">Actions</a>
-          <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data" target="_blank">Runtime Data</a>
-          <a class="action-link" href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank">ETF Dashboard ↗</a>
+          <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank" rel="noreferrer">Repo</a>
+          <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions" target="_blank" rel="noreferrer">Actions</a>
+          <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data" target="_blank" rel="noreferrer">Runtime Data</a>
+          <a class="action-link" href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank" rel="noreferrer">ETF Dashboard ↗</a>
         </div>
       </div>
     </div>
@@ -409,7 +174,7 @@ a.action-link:hover { background: var(--orange); color: #000; }
 
     <div class="panel">
       <div class="panel-header">RUNTIME SCAN <span class="cmd" id="runtimeSourceTag">RUNTIME-DATA</span></div>
-      <div id="runtimeStatusCard" class="stat-grid"></div>
+      <div id="runtimeStatusCard"></div>
     </div>
 
     <div class="panel span2">
@@ -506,10 +271,10 @@ a.action-link:hover { background: var(--orange); color: #000; }
 <div class="statusbar">
   <span id="footerStatus">Waiting for data...</span>
   <span class="footer-links">
-    <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank">Source</a>
-    <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions" target="_blank">Runs</a>
-    <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data" target="_blank">Artifacts</a>
-    <a href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank">ETF Dashboard ↗</a>
+    <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank" rel="noreferrer">Source</a>
+    <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions" target="_blank" rel="noreferrer">Runs</a>
+    <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data" target="_blank" rel="noreferrer">Artifacts</a>
+    <a href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank" rel="noreferrer">ETF Dashboard ↗</a>
   </span>
 </div>
 
