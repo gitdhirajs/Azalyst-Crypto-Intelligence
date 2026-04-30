@@ -1,17 +1,17 @@
 {
-  "timestamp": "2026-04-30T20:44:09.984103+00:00",
+  "timestamp": "2026-04-30T23:38:42.114777+00:00",
   "status": "healthy",
-  "symbols_attempted": 71,
-  "symbols_scanned": 71,
+  "symbols_attempted": 70,
+  "symbols_scanned": 70,
   "symbols_failed": 0,
   "min_volume_24h_usdt": 5000000.0,
   "request_errors": {
-    "count": 71,
+    "count": 70,
     "status_counts": {
-      "400": 71
+      "400": 70
     },
     "endpoint_counts": {
-      "okx_oi_history": 71
+      "okx_oi_history": 70
     },
     "examples": [
       {
@@ -31,15 +31,15 @@
       {
         "endpoint": "okx_oi_history",
         "status_code": 400,
-        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SOL-USDT-SWAP&period=5m&limit=12",
-        "symbol": "SOLUSDT",
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SKYAI-USDT-SWAP&period=5m&limit=12",
+        "symbol": "SKYAIUSDT",
         "period": "5m"
       },
       {
         "endpoint": "okx_oi_history",
         "status_code": 400,
-        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SKYAI-USDT-SWAP&period=5m&limit=12",
-        "symbol": "SKYAIUSDT",
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SOL-USDT-SWAP&period=5m&limit=12",
+        "symbol": "SOLUSDT",
         "period": "5m"
       },
       {
@@ -66,8 +66,8 @@
       {
         "endpoint": "okx_oi_history",
         "status_code": 400,
-        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=HYPE-USDT-SWAP&period=5m&limit=12",
-        "symbol": "HYPEUSDT",
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=RAVE-USDT-SWAP&period=5m&limit=12",
+        "symbol": "RAVEUSDT",
         "period": "5m"
       }
     ]
