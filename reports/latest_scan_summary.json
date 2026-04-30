@@ -1,17 +1,17 @@
 {
-  "timestamp": "2026-04-30T17:05:00.177698+00:00",
+  "timestamp": "2026-04-30T20:44:09.984103+00:00",
   "status": "healthy",
-  "symbols_attempted": 77,
-  "symbols_scanned": 77,
+  "symbols_attempted": 71,
+  "symbols_scanned": 71,
   "symbols_failed": 0,
   "min_volume_24h_usdt": 5000000.0,
   "request_errors": {
-    "count": 77,
+    "count": 71,
     "status_counts": {
-      "400": 77
+      "400": 71
     },
     "endpoint_counts": {
-      "okx_oi_history": 77
+      "okx_oi_history": 71
     },
     "examples": [
       {
@@ -59,8 +59,8 @@
       {
         "endpoint": "okx_oi_history",
         "status_code": 400,
-        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=BSB-USDT-SWAP&period=5m&limit=12",
-        "symbol": "BSBUSDT",
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=ZEC-USDT-SWAP&period=5m&limit=12",
+        "symbol": "ZECUSDT",
         "period": "5m"
       },
       {
