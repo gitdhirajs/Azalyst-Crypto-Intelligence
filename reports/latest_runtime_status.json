@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-05-01T12:08:24.086901+00:00",
+  "generated_at": "2026-05-01T14:46:28.944718+00:00",
   "dashboard_name": "Azalyst Crypto Futures Scanner v2.1",
   "source_mode": "github_actions",
   "data_source": "free_public_apis (KuCoin/Bitget/OKX \u2014 no paid keys, no blocked exchanges)",
   "scanner": {
-    "timestamp": "2026-05-01T11:42:28.498555+00:00",
+    "timestamp": "2026-05-01T14:43:04.989391+00:00",
     "status": "healthy",
-    "symbols_attempted": 65,
-    "symbols_scanned": 65,
+    "symbols_attempted": 66,
+    "symbols_scanned": 66,
     "symbols_failed": 0,
     "min_volume_24h_usdt": 5000000.0,
     "request_errors": {
-      "count": 65,
+      "count": 66,
       "status_counts": {
-        "400": 65
+        "400": 66
       },
       "endpoint_counts": {
-        "okx_oi_history": 65
+        "okx_oi_history": 66
       },
       "examples": [
         {
@@ -50,15 +50,15 @@
         {
           "endpoint": "okx_oi_history",
           "status_code": 400,
-          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=ZEC-USDT-SWAP&period=5m&limit=12",
-          "symbol": "ZECUSDT",
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=DOGE-USDT-SWAP&period=5m&limit=12",
+          "symbol": "DOGEUSDT",
           "period": "5m"
         },
         {
           "endpoint": "okx_oi_history",
           "status_code": 400,
-          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=DOGE-USDT-SWAP&period=5m&limit=12",
-          "symbol": "DOGEUSDT",
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=ZEC-USDT-SWAP&period=5m&limit=12",
+          "symbol": "ZECUSDT",
           "period": "5m"
         },
         {
@@ -79,7 +79,14 @@
     }
   },
   "main_model": {
-    "status": "missing"
+    "status": "not_enough_data",
+    "timestamp": null,
+    "accuracy": null,
+    "roc_auc": null,
+    "samples": 80,
+    "calibrated": null,
+    "primary_split": null,
+    "edge_over_baseline_pct": null
   },
   "hourly_model": {
     "status": "trained",
