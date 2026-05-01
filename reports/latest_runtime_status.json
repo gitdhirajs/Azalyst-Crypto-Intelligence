@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-05-01T08:31:20.833337+00:00",
+  "generated_at": "2026-05-01T11:45:07.788888+00:00",
   "dashboard_name": "Azalyst Crypto Futures Scanner v2.1",
   "source_mode": "github_actions",
   "data_source": "free_public_apis (KuCoin/Bitget/OKX \u2014 no paid keys, no blocked exchanges)",
   "scanner": {
-    "timestamp": "2026-05-01T07:52:43.432656+00:00",
+    "timestamp": "2026-05-01T11:42:28.498555+00:00",
     "status": "healthy",
-    "symbols_attempted": 67,
-    "symbols_scanned": 67,
+    "symbols_attempted": 65,
+    "symbols_scanned": 65,
     "symbols_failed": 0,
     "min_volume_24h_usdt": 5000000.0,
     "request_errors": {
-      "count": 67,
+      "count": 65,
       "status_counts": {
-        "400": 67
+        "400": 65
       },
       "endpoint_counts": {
-        "okx_oi_history": 67
+        "okx_oi_history": 65
       },
       "examples": [
         {
@@ -50,13 +50,6 @@
         {
           "endpoint": "okx_oi_history",
           "status_code": 400,
-          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=DOGE-USDT-SWAP&period=5m&limit=12",
-          "symbol": "DOGEUSDT",
-          "period": "5m"
-        },
-        {
-          "endpoint": "okx_oi_history",
-          "status_code": 400,
           "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=ZEC-USDT-SWAP&period=5m&limit=12",
           "symbol": "ZECUSDT",
           "period": "5m"
@@ -64,8 +57,8 @@
         {
           "endpoint": "okx_oi_history",
           "status_code": 400,
-          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=PEPE-USDT-SWAP&period=5m&limit=12",
-          "symbol": "PEPEUSDT",
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=DOGE-USDT-SWAP&period=5m&limit=12",
+          "symbol": "DOGEUSDT",
           "period": "5m"
         },
         {
@@ -74,12 +67,26 @@
           "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=HYPE-USDT-SWAP&period=5m&limit=12",
           "symbol": "HYPEUSDT",
           "period": "5m"
+        },
+        {
+          "endpoint": "okx_oi_history",
+          "status_code": 400,
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=PEPE-USDT-SWAP&period=5m&limit=12",
+          "symbol": "PEPEUSDT",
+          "period": "5m"
         }
       ]
     }
   },
   "main_model": {
-    "status": "missing"
+    "status": "not_enough_data",
+    "timestamp": null,
+    "accuracy": null,
+    "roc_auc": null,
+    "samples": 80,
+    "calibrated": null,
+    "primary_split": null,
+    "edge_over_baseline_pct": null
   },
   "hourly_model": {
     "status": "trained",
