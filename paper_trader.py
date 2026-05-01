@@ -11,6 +11,8 @@ import os
 from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 
+import requests
+
 log = logging.getLogger("azalyst_crypto.trader")
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -19,6 +21,9 @@ MIN_TRADE_USD = 50
 STOP_LOSS_PCT = 0.10
 TRAILING_STOP_PCT = 0.08
 MAX_HOLD_HOURS = 48
+
+# Discord webhook for paper trade alerts
+DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK_URL", "").strip()
 
 
 class Portfolio:
@@ -86,6 +91,7 @@ class Portfolio:
         self.open_positions.append(pos)
         self.save()
         log.info("ENTER %s: %s @ %.4f x %.2f = $%.2f", pos["id"], symbol, entry_price, units, cost)
+        self._send_discord_alert("ENTRY", pos)
         return pos
 
     def update_prices(self, prices: Dict[str, float]):
@@ -130,6 +136,7 @@ class Portfolio:
                 self.cash_usdt += round(exit_price * pos["units"], 2)
                 exits.append(trade)
                 log.info("EXIT %s: %s P&L $%.2f (%+.2f%%) — %s", pos["id"], pos["symbol"], pnl, pnl_pct, reason)
+                self._send_discord_alert("EXIT", trade)
         if exits:
             self.save()
         return exits
@@ -161,3 +168,55 @@ class Portfolio:
             "winners": len(winners),
             "losers": len(losers),
         }
+
+    def _send_discord_alert(self, action: str, data: Dict) -> bool:
+        """Send paper trade entry/exit alerts to Discord webhook."""
+        if not DISCORD_WEBHOOK:
+            return False
+        
+        try:
+            if action == "ENTRY":
+                color = 0x2ECC71
+                title = f"📈 PAPER ENTRY: {data['symbol']}"
+                description = (
+                    f"**Trade ID:** `{data['id']}`\n"
+                    f"**Direction:** LONG\n"
+                    f"**Entry Price:** `${data['entry_price']:,.4f}`\n"
+                    f"**Units:** `{data['units']:.4f}`\n"
+                    f"**Invested:** `${data['invested']:,.2f}`\n"
+                    f"**Confidence:** `{data['confidence']}/100`\n"
+                    f"**Stop Loss:** `${data['trail_stop']:,.4f}`"
+                )
+            else:  # EXIT
+                color = 0xE74C3C if data["pnl"] < 0 else 0x2ECC71
+                emoji = "💰" if data["pnl"] > 0 else "💸"
+                title = f"{emoji} PAPER EXIT: {data['symbol']}"
+                pnl_sign = "+" if data["pnl"] >= 0 else ""
+                description = (
+                    f"**Trade ID:** `{data['id']}`\n"
+                    f"**Entry Price:** `${data['entry_price']:,.4f}`\n"
+                    f"**Exit Price:** `${data['exit_price']:,.4f}`\n"
+                    f"**P&L:** `${pnl_sign}{data['pnl']:,.2f}` ({pnl_sign}{data['pnl_pct']:.2f}%)\n"
+                    f"**Reason:** {data['exit_reason']}"
+                )
+            
+            embed = {
+                "title": title,
+                "description": description,
+                "color": color,
+                "footer": {"text": "Azalyst Crypto Paper Trading"},
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            
+            resp = requests.post(
+                DISCORD_WEBHOOK,
+                json={"embeds": [embed]},
+                timeout=8,
+            )
+            if resp.status_code in (200, 204):
+                log.info("Discord paper trade alert sent: %s %s", action, data.get("symbol", ""))
+                return True
+            log.warning("Discord webhook returned %d: %s", resp.status_code, resp.text[:200])
+        except Exception as exc:
+            log.warning("Discord paper trade alert failed: %s", exc)
+        return False
