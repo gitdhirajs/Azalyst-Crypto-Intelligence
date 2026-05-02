@@ -1,17 +1,17 @@
 {
-  "timestamp": "2026-05-02T19:44:29.681493+00:00",
+  "timestamp": "2026-05-02T22:03:05.288565+00:00",
   "status": "healthy",
-  "symbols_attempted": 63,
-  "symbols_scanned": 63,
+  "symbols_attempted": 64,
+  "symbols_scanned": 64,
   "symbols_failed": 0,
   "min_volume_24h_usdt": 5000000.0,
   "request_errors": {
-    "count": 63,
+    "count": 64,
     "status_counts": {
-      "400": 63
+      "400": 64
     },
     "endpoint_counts": {
-      "okx_oi_history": 63
+      "okx_oi_history": 64
     },
     "examples": [
       {
