@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-05-02T14:18:43.972215+00:00",
+  "generated_at": "2026-05-02T16:36:37.112181+00:00",
   "dashboard_name": "Azalyst Crypto Futures Scanner v2.1",
   "source_mode": "github_actions",
   "data_source": "free_public_apis (KuCoin/Bitget/OKX \u2014 no paid keys, no blocked exchanges)",
   "scanner": {
-    "timestamp": "2026-05-02T14:13:52.946253+00:00",
+    "timestamp": "2026-05-02T16:33:09.280080+00:00",
     "status": "healthy",
-    "symbols_attempted": 67,
-    "symbols_scanned": 67,
+    "symbols_attempted": 66,
+    "symbols_scanned": 66,
     "symbols_failed": 0,
     "min_volume_24h_usdt": 5000000.0,
     "request_errors": {
-      "count": 67,
+      "count": 66,
       "status_counts": {
-        "400": 67
+        "400": 66
       },
       "endpoint_counts": {
-        "okx_oi_history": 67
+        "okx_oi_history": 66
       },
       "examples": [
         {
@@ -29,15 +29,15 @@
         {
           "endpoint": "okx_oi_history",
           "status_code": 400,
-          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=ETH-USDT-SWAP&period=5m&limit=12",
-          "symbol": "ETHUSDT",
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=LAB-USDT-SWAP&period=5m&limit=12",
+          "symbol": "LABUSDT",
           "period": "5m"
         },
         {
           "endpoint": "okx_oi_history",
           "status_code": 400,
-          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=LAB-USDT-SWAP&period=5m&limit=12",
-          "symbol": "LABUSDT",
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=ETH-USDT-SWAP&period=5m&limit=12",
+          "symbol": "ETHUSDT",
           "period": "5m"
         },
         {
@@ -79,7 +79,14 @@
     }
   },
   "main_model": {
-    "status": "missing"
+    "status": "not_enough_data",
+    "timestamp": null,
+    "accuracy": null,
+    "roc_auc": null,
+    "samples": 80,
+    "calibrated": null,
+    "primary_split": null,
+    "edge_over_baseline_pct": null
   },
   "hourly_model": {
     "status": "trained",
