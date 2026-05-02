@@ -1,16 +1,31 @@
-```python
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-
+```
 # Dependencies
-.venv/
+node_modules/
 venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+target/
+.gradle/
 
-# Logs and temp files
+# Compiled files
+*.pyc
+*.class
+*.o
+*.exe
+*.dll
+*.so
+*.a
+*.obj
+*.out
+
+# Build artifacts
+dist/
+build/
+coverage/
+htmlcov/
 *.log
-*.tmp
-*.swp
 
 # Environment
 .env
@@ -20,13 +35,31 @@ venv/
 # Editors
 .vscode/
 .idea/
+*.swp
+*.swo
+*.tmp
 
-# Coverage reports
-.coverage
-coverage/
-htmlcov/
+# System
+.DS_Store
+Thumbs.db
 
-# Testing
-.pytest_cache/
-.mypy_cache/
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
 ```
