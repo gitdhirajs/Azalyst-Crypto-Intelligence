@@ -4,13 +4,13 @@
 
 | symbol | price | price_change_pct_24h | ml_probability |
 | --- | --- | --- | --- |
-| BTCUSDT | 78275.98 | 1.39 | None |
-| ETHUSDT | 2303.98 | 1.01 | None |
-| LABUSDT | 2.10265 | 210.94 | None |
-| SKYAIUSDT | 0.36018 | -6.41 | None |
-| SOLUSDT | 83.954 | 0.08 | None |
-| ZECUSDT | 378.33 | 7.57 | None |
-| PEPEUSDT | 3.9312e-06 | 0.52 | None |
-| HYPEUSDT | 41.828 | 2.6599999999999997 | None |
-| UBUSDT | 0.1553083 | 65.72 | None |
-| ZEREBROUSDT | 0.02899 | -8.91 | None |
+| BTCUSDT | 78303.0 | -0.52 | None |
+| ETHUSDT | 2305.54 | -0.59 | None |
+| LABUSDT | 2.37484 | 234.48000000000002 | None |
+| SKYAIUSDT | 0.43508 | 14.17 | None |
+| SOLUSDT | 83.929 | -0.79 | None |
+| ZECUSDT | 372.95 | 6.08 | None |
+| UBUSDT | 0.1470813 | 22.55 | None |
+| HYPEUSDT | 41.351 | 1.35 | None |
+| PEPEUSDT | 3.9476e-06 | -0.6799999999999999 | None |
+| ZEREBROUSDT | 0.02926 | -16.36 | None |

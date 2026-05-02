@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-05-02T10:11:41.733575+00:00",
+  "generated_at": "2026-05-02T14:17:22.167750+00:00",
   "dashboard_name": "Azalyst Crypto Futures Scanner v2.1",
   "source_mode": "github_actions",
   "data_source": "free_public_apis (KuCoin/Bitget/OKX \u2014 no paid keys, no blocked exchanges)",
   "scanner": {
-    "timestamp": "2026-05-02T10:08:17.309629+00:00",
+    "timestamp": "2026-05-02T14:13:52.946253+00:00",
     "status": "healthy",
-    "symbols_attempted": 68,
-    "symbols_scanned": 68,
+    "symbols_attempted": 67,
+    "symbols_scanned": 67,
     "symbols_failed": 0,
     "min_volume_24h_usdt": 5000000.0,
     "request_errors": {
-      "count": 68,
+      "count": 67,
       "status_counts": {
-        "400": 68
+        "400": 67
       },
       "endpoint_counts": {
-        "okx_oi_history": 68
+        "okx_oi_history": 67
       },
       "examples": [
         {
@@ -64,8 +64,8 @@
         {
           "endpoint": "okx_oi_history",
           "status_code": 400,
-          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=PEPE-USDT-SWAP&period=5m&limit=12",
-          "symbol": "PEPEUSDT",
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=UB-USDT-SWAP&period=5m&limit=12",
+          "symbol": "UBUSDT",
           "period": "5m"
         },
         {
