@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-05-02T00:08:28.727034+00:00",
+  "generated_at": "2026-05-02T06:34:02.667659+00:00",
   "dashboard_name": "Azalyst Crypto Futures Scanner v2.1",
   "source_mode": "github_actions",
   "data_source": "free_public_apis (KuCoin/Bitget/OKX \u2014 no paid keys, no blocked exchanges)",
   "scanner": {
-    "timestamp": "2026-05-01T23:38:15.479162+00:00",
+    "timestamp": "2026-05-02T06:30:32.627850+00:00",
     "status": "healthy",
-    "symbols_attempted": 70,
-    "symbols_scanned": 70,
+    "symbols_attempted": 69,
+    "symbols_scanned": 69,
     "symbols_failed": 0,
     "min_volume_24h_usdt": 5000000.0,
     "request_errors": {
-      "count": 70,
+      "count": 69,
       "status_counts": {
-        "400": 70
+        "400": 69
       },
       "endpoint_counts": {
-        "okx_oi_history": 70
+        "okx_oi_history": 69
       },
       "examples": [
         {
@@ -50,6 +50,13 @@
         {
           "endpoint": "okx_oi_history",
           "status_code": 400,
+          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=LAB-USDT-SWAP&period=5m&limit=12",
+          "symbol": "LABUSDT",
+          "period": "5m"
+        },
+        {
+          "endpoint": "okx_oi_history",
+          "status_code": 400,
           "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=ZEC-USDT-SWAP&period=5m&limit=12",
           "symbol": "ZECUSDT",
           "period": "5m"
@@ -64,13 +71,6 @@
         {
           "endpoint": "okx_oi_history",
           "status_code": 400,
-          "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=DOGE-USDT-SWAP&period=5m&limit=12",
-          "symbol": "DOGEUSDT",
-          "period": "5m"
-        },
-        {
-          "endpoint": "okx_oi_history",
-          "status_code": 400,
           "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=HYPE-USDT-SWAP&period=5m&limit=12",
           "symbol": "HYPEUSDT",
           "period": "5m"
@@ -79,7 +79,14 @@
     }
   },
   "main_model": {
-    "status": "missing"
+    "status": "not_enough_data",
+    "timestamp": null,
+    "accuracy": null,
+    "roc_auc": null,
+    "samples": 80,
+    "calibrated": null,
+    "primary_split": null,
+    "edge_over_baseline_pct": null
   },
   "hourly_model": {
     "status": "trained",
