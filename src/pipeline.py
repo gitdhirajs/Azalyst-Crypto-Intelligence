@@ -34,6 +34,7 @@ from rich.progress import (
 
 from src.alerter import alert_fused_signals
 from src.backtester import WalkForwardBacktester
+from src.backtester_purged import PurgedWalkForward
 from src.derived_data import DerivedDataClient
 from src.collector import (
     get_active_symbols,
@@ -54,6 +55,8 @@ from src.signal_engines import (
 )
 from src.signal_fusion import DynamicSignalFuser
 from src.trainer import predict_current, train_model, incremental_train
+from src.fusion_logger import log_fused_outcomes
+from paper_trader import Portfolio, RiskManager
 
 log = logging.getLogger("azalyst.pipeline")
 
@@ -484,6 +487,17 @@ def run_scheduled_pipeline(
     send_alerts: bool = True,
 ) -> dict:
     """v2.1 scheduled entry — preserves the v2.0 signature plus three new flags."""
+    # Load previous fused signals for outcome logging BEFORE they get overwritten
+    prev_fused_path = REPORTS_DIR / "latest_fused_signals.json"
+    previous_fused_signals = []
+    if prev_fused_path.exists():
+        try:
+            with open(prev_fused_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                previous_fused_signals = data.get("signals", [])
+        except Exception:
+            pass
+
     scan_df = scan_market_once(show_progress=show_progress)
 
     main_report = None
@@ -499,6 +513,7 @@ def run_scheduled_pipeline(
 
         if run_engines:
             fused_signals = run_multi_engine(scored_scan)
+            log_fused_outcomes(previous_fused_signals)
 
             if send_alerts and fused_signals:
                 from src.signal_fusion import FusedCryptoSignal
@@ -522,8 +537,35 @@ def run_scheduled_pipeline(
                     ))
                 alert_fused_signals(rebuilt)
 
+        portfolio_path = REPORTS_DIR / "portfolio.json"
+        risk_mgr = RiskManager(max_positions=10, daily_loss_limit_pct=5, corr_threshold=0.75)
+        portfolio = Portfolio(portfolio_file=str(portfolio_path), risk_manager=risk_mgr)
+
+        mid_prices = {}
+        if not scan_df.empty:
+            for _, row in scan_df.iterrows():
+                mid_prices[row["symbol"]] = (row.get("high_24h", row.get("price", 0)) + row.get("low_24h", row.get("price", 0))) / 2.0
+
+        for sig in fused_signals:
+            if sig.get("consensus_tier") in ("A", "B"):
+                sym = sig["symbol"]
+                if sym not in mid_prices:
+                    continue
+                entry_price = mid_prices[sym]
+                if sig["direction"] == "LONG":
+                    equity = portfolio.cash_usdt + sum(p["current_price"] * p["units"] for p in portfolio.open_positions)
+                    risk_amount = equity * 0.01
+                    units = risk_amount / (entry_price * (getattr(portfolio, "stop_loss_pct", 0.1)))
+                    portfolio.enter_position(sym, entry_price, units, sig.get("fused_score", 50), mid_prices)
+
+        portfolio.update_prices(mid_prices)
+        portfolio.check_exits()
+
         if run_backtest and main_report and main_report.get("status") == "trained":
-            backtest_dict = WalkForwardBacktester().run().to_dict()
+            bt = PurgedWalkForward(n_splits=5, purge_hours=3, long_threshold=0.62)
+            backtest_dict = bt.run()
+            if backtest_dict.get("status") == "no_data":
+                backtest_dict = {"status": "no_data"}
 
     hourly_report = None
     if train_hourly_pattern_model:
