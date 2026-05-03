@@ -500,6 +500,17 @@ def run_scheduled_pipeline(
 
     scan_df = scan_market_once(show_progress=show_progress)
 
+    # Load previous fused signals for outcome logging BEFORE they get overwritten
+    prev_fused_path = REPORTS_DIR / "latest_fused_signals.json"
+    previous_fused_signals = []
+    if prev_fused_path.exists():
+        try:
+            with open(prev_fused_path, "r") as f:
+                data = json.load(f)
+                previous_fused_signals = data.get("signals", [])
+        except Exception:
+            pass
+
     main_report = None
     top_scan_signals = pd.DataFrame()
     fused_signals: List[Dict] = []
@@ -513,6 +524,8 @@ def run_scheduled_pipeline(
 
         if run_engines:
             fused_signals = run_multi_engine(scored_scan)
+            # Log outcomes from PREVIOUS cycle using current features
+            log_fused_outcomes(previous_fused_signals)
             log_fused_outcomes(previous_fused_signals)
 
             if send_alerts and fused_signals:
@@ -581,6 +594,35 @@ def run_scheduled_pipeline(
         scan_signals=top_scan_signals, fused_signals=fused_signals,
         backtest=backtest_dict,
     )
+
+    # --- Paper Trader (new) ---
+    from paper_trader import Portfolio, RiskManager, STOP_LOSS_PCT
+
+    portfolio_path = REPORTS_DIR / "portfolio.json"
+    risk_mgr = RiskManager(max_positions=10, daily_loss_limit_pct=5, corr_threshold=0.75)
+    portfolio = Portfolio(portfolio_file=str(portfolio_path), risk_manager=risk_mgr)
+
+    mid_prices = {}
+    if not scan_df.empty:
+        for _, row in scan_df.iterrows():
+            high = row.get("high_24h", row.get("price", 0))
+            low = row.get("low_24h", row.get("price", 0))
+            mid_prices[row["symbol"]] = (high + low) / 2.0
+
+    if fused_signals:
+        for sig in fused_signals:
+            if sig.get("consensus_tier") in ("A", "B") and sig["direction"] == "LONG":
+                sym = sig["symbol"]
+                if sym not in mid_prices:
+                    continue
+                entry_price = mid_prices[sym]
+                equity = portfolio.cash_usdt + sum(p["current_price"] * p["units"] for p in portfolio.open_positions)
+                risk_amount = equity * 0.01
+                units = risk_amount / (entry_price * STOP_LOSS_PCT)
+                portfolio.enter_position(sym, entry_price, units, sig.get("fused_score", 50), mid_prices)
+
+    portfolio.update_prices(mid_prices)
+    portfolio.check_exits()
 
     return {
         "scan_rows": int(len(scan_df)),
