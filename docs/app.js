@@ -42,16 +42,7 @@ const els = {
   issuesPanel: document.getElementById("issuesPanel"),
 };
 
-// ── Tab navigation ───────────────────────────────────────────────────
-function switchTab(page) {
-  document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
-  document.getElementById("page-" + page)?.classList.add("active");
-  document.querySelectorAll(".tab").forEach((t) => {
-    t.classList.toggle("active", (t.getAttribute("onclick") || "").includes(`'${page}'`));
-  });
-}
-
-// ── Clock (IST) ──────────────────────────────────────────────────────
+// ── Clock (IST — matches ETF Intelligence) ──────────────────────────
 function updateClock() {
   const now = new Date();
   els.clockValue.textContent = now.toLocaleString("en-IN", {
@@ -64,13 +55,14 @@ function updateClock() {
   });
 }
 
-// ── Live status dot ──────────────────────────────────────────────────
+// ── Live status dot (mirrors ETF: ● LIVE / ● OFFLINE / ● DEGRADED) ──
 function setLivePill(label, tone = "warn") {
+  // tone: "live" | "warn" | "dead"
   els.liveStatus.className = `status-dot ${tone}`;
   els.liveStatus.textContent = label;
 }
 
-// ── Formatting helpers ───────────────────────────────────────────────
+// ── Formatting helpers (unchanged) ──────────────────────────────────
 function formatRelative(value) {
   if (!value) return "n/a";
   const stamp = new Date(value);
@@ -213,7 +205,7 @@ function renderWorkflowCards(runs) {
     if (!run) {
       return `
         <div class="metric-card">
-          <div class="metric-label">${item.label}</div>
+          <span class="metric-label">${item.label}</span>
           <div class="metric-value" style="font-size:13px">No runs yet</div>
           <div class="metric-subtle">Waiting for first execution.</div>
         </div>`;
@@ -225,8 +217,12 @@ function renderWorkflowCards(runs) {
           <strong>${item.label}</strong>
           <span class="pill pill-${statusTone(state)}">${state}</span>
         </div>
-        <div class="metric-subtle">Run #${run.run_number} &middot; ${formatRelative(run.updated_at)}</div>
-        <div class="metric-subtle"><a class="runtime-link" href="${run.html_url}" target="_blank" rel="noreferrer">View run ↗</a></div>
+        <div class="metric-subtle">
+          Run #${run.run_number} &middot; ${formatRelative(run.updated_at)} &middot; ${formatDate(run.updated_at)}
+        </div>
+        <div class="metric-subtle">
+          <a class="runtime-link" href="${run.html_url}" target="_blank" rel="noreferrer">View run ↗</a>
+        </div>
       </div>`;
   });
   els.workflowCards.innerHTML = cards.join("");
@@ -242,30 +238,39 @@ function renderRuntimeStatus(runtimeStatus, usedRuntimePayload) {
   els.runtimeStatusCard.innerHTML = `
     <div class="stats-grid">
       <div class="stat-box">
-        <div class="stat-label">Status</div>
-        <div class="stat-val" style="font-size:15px">${status.toUpperCase()}</div>
-        <div class="stat-sub">${scanner.headline || "No scanner headline."}</div>
+        <span class="metric-label">Status</span>
+        <div class="metric-value" style="font-size:15px">${status.toUpperCase()}</div>
+        <div class="metric-subtle">${scanner.headline || "No scanner headline."}</div>
       </div>
       <div class="stat-box">
-        <div class="stat-label">Last Update</div>
-        <div class="stat-val" style="font-size:15px">${formatRelative(scanner.timestamp || runtimeStatus?.generated_at)}</div>
-        <div class="stat-sub">${formatDate(scanner.timestamp || runtimeStatus?.generated_at)}</div>
+        <span class="metric-label">Last Update</span>
+        <div class="metric-value" style="font-size:15px">${formatRelative(scanner.timestamp || runtimeStatus?.generated_at)}</div>
+        <div class="metric-subtle">${formatDate(scanner.timestamp || runtimeStatus?.generated_at)}</div>
       </div>
       <div class="stat-box">
-        <div class="stat-label">Rows</div>
-        <div class="stat-val">${formatNumber(scanner.symbols_scanned || 0)}</div>
-        <div class="stat-sub">of ${formatNumber(scanner.symbols_attempted || 0)} attempted</div>
+        <span class="metric-label">Rows</span>
+        <div class="metric-value">${formatNumber(scanner.symbols_scanned || 0)}</div>
+        <div class="metric-subtle">of ${formatNumber(scanner.symbols_attempted || 0)} attempted</div>
       </div>
       <div class="stat-box">
-        <div class="stat-label">Failures</div>
-        <div class="stat-val">${formatNumber(scanner.symbols_failed || 0)}</div>
-        <div class="stat-sub">403: ${requestErrors.status_counts?.["403"] || 0} / 451: ${requestErrors.status_counts?.["451"] || 0}</div>
+        <span class="metric-label">Failures</span>
+        <div class="metric-value">${formatNumber(scanner.symbols_failed || 0)}</div>
+        <div class="metric-subtle">403: ${requestErrors.status_counts?.["403"] || 0} / 451: ${requestErrors.status_counts?.["451"] || 0}</div>
       </div>
     </div>
     <div class="meta-list">
-      <div class="meta-line"><span>Min 24h volume filter</span><strong>${formatNumber(scanner.min_volume_24h_usdt || 0)}</strong></div>
-      <div class="meta-line"><span>Provider blocks</span><strong>${requestErrors.status_counts?.["403"] || requestErrors.status_counts?.["451"] ? "Block observed" : "None captured"}</strong></div>
-      <div class="meta-line"><span>Endpoints with errors</span><strong>${Object.keys(requestErrors.endpoint_counts || {}).length || 0}</strong></div>
+      <div class="meta-line">
+        <span>Min 24h volume filter</span>
+        <strong>${formatNumber(scanner.min_volume_24h_usdt || 0)}</strong>
+      </div>
+      <div class="meta-line">
+        <span>Provider blocks</span>
+        <strong>${requestErrors.status_counts?.["403"] || requestErrors.status_counts?.["451"] ? "Block observed" : "None captured"}</strong>
+      </div>
+      <div class="meta-line">
+        <span>Endpoints with errors</span>
+        <strong>${Object.keys(requestErrors.endpoint_counts || {}).length || 0}</strong>
+      </div>
     </div>`;
 }
 
@@ -283,30 +288,39 @@ function renderModelCard(target, sourceTarget, report, sourceLabel, type) {
   target.innerHTML = `
     <div class="stats-grid">
       <div class="stat-box">
-        <div class="stat-label">Status</div>
-        <div class="stat-val" style="font-size:15px">${report.status || "unknown"}</div>
-        <div class="stat-sub">${formatDate(report.timestamp)}</div>
+        <span class="metric-label">Status</span>
+        <div class="metric-value" style="font-size:15px">${report.status || "unknown"}</div>
+        <div class="metric-subtle">${formatDate(report.timestamp)}</div>
       </div>
       <div class="stat-box">
-        <div class="stat-label">Accuracy</div>
-        <div class="stat-val">${report.accuracy != null ? formatPct(report.accuracy) : "n/a"}</div>
-        <div class="stat-sub">baseline ${report.baseline_accuracy != null ? formatPct(report.baseline_accuracy) : "n/a"}</div>
+        <span class="metric-label">Accuracy</span>
+        <div class="metric-value">${report.accuracy != null ? formatPct(report.accuracy) : "n/a"}</div>
+        <div class="metric-subtle">baseline ${report.baseline_accuracy != null ? formatPct(report.baseline_accuracy) : "n/a"}</div>
       </div>
       <div class="stat-box">
-        <div class="stat-label">ROC AUC</div>
-        <div class="stat-val">${report.roc_auc != null ? formatDecimal(report.roc_auc, 3) : "n/a"}</div>
-        <div class="stat-sub">F1 ${report.f1_score != null ? formatDecimal(report.f1_score, 3) : "n/a"}</div>
+        <span class="metric-label">ROC AUC</span>
+        <div class="metric-value">${report.roc_auc != null ? formatDecimal(report.roc_auc, 3) : "n/a"}</div>
+        <div class="metric-subtle">F1 ${report.f1_score != null ? formatDecimal(report.f1_score, 3) : "n/a"}</div>
       </div>
       <div class="stat-box">
-        <div class="stat-label">Samples</div>
-        <div class="stat-val">${formatNumber(report.n_samples || 0)}</div>
-        <div class="stat-sub">symbols ${formatNumber(report.n_symbols || 0)}</div>
+        <span class="metric-label">Samples</span>
+        <div class="metric-value">${formatNumber(report.n_samples || 0)}</div>
+        <div class="metric-subtle">symbols ${formatNumber(report.n_symbols || 0)}</div>
       </div>
     </div>
     <div class="meta-list">
-      <div class="meta-line"><span>Evaluation split</span><strong>${report.primary_split || report.evaluation_split || "time-ordered"}</strong></div>
-      <div class="meta-line"><span>Lead feature</span><strong>${topFeature ? `${topFeature[0]} (${formatDecimal(topFeature[1], 3)})` : "n/a"}</strong></div>
-      <div class="meta-line"><span>Training note</span><strong>${extraLabel}</strong></div>
+      <div class="meta-line">
+        <span>Evaluation split</span>
+        <strong>${report.primary_split || report.evaluation_split || "time-ordered"}</strong>
+      </div>
+      <div class="meta-line">
+        <span>Lead feature</span>
+        <strong>${topFeature ? `${topFeature[0]} (${formatDecimal(topFeature[1], 3)})` : "n/a"}</strong>
+      </div>
+      <div class="meta-line">
+        <span>Training note</span>
+        <strong>${extraLabel}</strong>
+      </div>
     </div>`;
 }
 
@@ -345,7 +359,9 @@ function renderFeatures(target, report) {
   target.innerHTML = features.slice(0, 10).map(([name, value]) => `
     <div class="feature-row">
       <span>${name}</span>
-      <div class="bar-rail"><div class="bar-fill" style="width:${(Number(value) / maxValue) * 100}%"></div></div>
+      <div class="bar-rail">
+        <div class="bar-fill" style="width:${(Number(value) / maxValue) * 100}%"></div>
+      </div>
       <strong>${formatDecimal(value, 3)}</strong>
     </div>`).join("");
 }
@@ -413,17 +429,13 @@ function renderWorkflowTable(runs) {
       <div class="table-head">
         <span>Workflow</span><span>State</span><span>Event</span><span>Updated</span>
       </div>
-      ${runs.slice(0, 8).map((run) => {
-        const tone = statusTone(run.conclusion || run.status);
-        const cls = tone === "good" ? "positive" : tone === "bad" ? "negative" : "warning";
-        return `
-          <div class="table-row">
-            <span><a class="runtime-link" href="${run.html_url}" target="_blank" rel="noreferrer">${run.name}</a></span>
-            <span class="${cls}">${run.conclusion || run.status}</span>
-            <span>${run.event}</span>
-            <span>${formatRelative(run.updated_at)}</span>
-          </div>`;
-      }).join("")}
+      ${runs.slice(0, 8).map((run) => `
+        <div class="table-row">
+          <span><a class="runtime-link" href="${run.html_url}" target="_blank" rel="noreferrer">${run.name}</a></span>
+          <span class="${statusTone(run.conclusion || run.status) === "good" ? "positive" : statusTone(run.conclusion || run.status) === "bad" ? "negative" : "warning"}">${run.conclusion || run.status}</span>
+          <span>${run.event}</span>
+          <span>${formatRelative(run.updated_at)}</span>
+        </div>`).join("")}
     </div>`;
 }
 
@@ -452,7 +464,9 @@ function renderSourceMatrix(bootstrap, runtimePayload, runs, repo) {
   ];
   els.sourceMatrix.innerHTML = `
     <div class="source-table">
-      <div class="source-head"><span>Source</span><span>State</span><span>Detail</span></div>
+      <div class="source-head">
+        <span>Source</span><span>State</span><span>Detail</span>
+      </div>
       ${sources.map((item) => `
         <div class="source-row">
           <span>${item.name}</span>
@@ -513,6 +527,7 @@ function renderShell(repo, payload, runs, runtimeFiles, bootstrap, runtimePayloa
   els.summaryPreview.textContent = payload.summary_markdown;
   els.footerStatus.textContent = `${headline} | Last push ${formatRelative(repo?.pushed_at)}`;
 
+  // Status dot — matches ETF: ● LIVE / ● OFFLINE / ● DEGRADED
   if (scanner.status === "healthy") {
     setLivePill("LIVE", "live");
   } else if (scanner.status === "blocked" || scanner.status === "blocked_exchange") {
@@ -527,8 +542,8 @@ function renderShell(repo, payload, runs, runtimeFiles, bootstrap, runtimePayloa
   renderSignals(payload.hourly_live_signals);
   renderFeatures(els.mainFeatures,   payload.main_report);
   renderFeatures(els.hourlyFeatures, payload.hourly_report);
-  renderClusters(els.mainClusters,   payload.main_report?.bucket_analysis?.scanner_clusters,   "top_gainer_clusters", "top_loser_clusters",    "win_rate");
-  renderClusters(els.hourlyClusters, payload.hourly_report?.bucket_analysis?.pattern_clusters, "top_gainer_clusters", "top_failure_clusters",  "continuation_rate");
+  renderClusters(els.mainClusters,   payload.main_report?.bucket_analysis?.scanner_clusters,  "top_gainer_clusters", "top_loser_clusters",   "win_rate");
+  renderClusters(els.hourlyClusters, payload.hourly_report?.bucket_analysis?.pattern_clusters, "top_gainer_clusters", "top_failure_clusters", "continuation_rate");
   renderBuckets(els.mainBuckets,   payload.main_report?.bucket_analysis,   "main");
   renderBuckets(els.hourlyBuckets, payload.hourly_report?.bucket_analysis, "hourly");
   renderWorkflowTable(runs);
@@ -537,6 +552,20 @@ function renderShell(repo, payload, runs, runtimeFiles, bootstrap, runtimePayloa
   const latestWorkflows = renderWorkflowCards(runs);
   renderTicker(repo, runtimeStatus, latestWorkflows);
   renderIssues(runtimeStatus, latestWorkflows, payload);
+}
+
+// ── Tab navigation ───────────────────────────────────────────────────
+function initTabs() {
+  const tabs   = document.querySelectorAll(".tab");
+  const panels = document.querySelectorAll(".tab-panel");
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((n) => n.classList.remove("active"));
+      panels.forEach((p) => p.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById(`tab-${tab.dataset.tab}`)?.classList.add("active");
+    });
+  });
 }
 
 // ── Data loading ─────────────────────────────────────────────────────
@@ -552,12 +581,14 @@ async function loadDashboard() {
     fetchRepoListing("reports", CONFIG.runtimeRef),
   ]);
 
-  const runs = workflowResponse?.workflow_runs || [];
+  const runs    = workflowResponse?.workflow_runs || [];
+  // Priority: Local payload > GitHub runtime payload > Bootstrap
   const payload = mergePayloads(bootstrap, localPayload || runtimePayload);
 
+  // Update source label if local was used
   if (localPayload) {
-    payload.runtime_status.scanner = payload.runtime_status.scanner || {};
-    payload.runtime_status.scanner.headline = (payload.runtime_status.scanner.headline || "") + " (Local Data)";
+      payload.runtime_status.scanner = payload.runtime_status.scanner || {};
+      payload.runtime_status.scanner.headline = (payload.runtime_status.scanner.headline || "") + " (Local Data)";
   }
 
   renderShell(repo, payload, runs, runtimeFiles, bootstrap, localPayload || runtimePayload);
@@ -565,6 +596,7 @@ async function loadDashboard() {
 
 // ── Bootstrap ────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
+  initTabs();
   updateClock();
   loadDashboard();
   setInterval(updateClock, 1000);

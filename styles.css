@@ -103,9 +103,9 @@ html, body {
 .topbar-meta { margin-left: auto; display: flex; gap: 16px; align-items: center; }
 .status-dot { color: #000; font-size: 11px; font-weight: 700; }
 .status-dot::before { content: "\25CF "; font-size: 10px; animation: blink 1s step-end infinite; }
-.status-dot.good::before { color: #00dd33; }
+.status-dot.good::before, .status-dot.live::before { color: #00dd33; }
 .status-dot.warn::before { color: #cc7700; }
-.status-dot.bad::before  { color: #cc2200; }
+.status-dot.bad::before, .status-dot.dead::before  { color: #cc2200; }
 .meta-value { color: #000; font-size: 11px; }
 .live-dot { color: #000; font-size: 16px; animation: blink 1s step-end infinite; }
 @keyframes blink { 50% { opacity: 0; } }
@@ -168,7 +168,7 @@ main, .main, .shell {
 .page.active, .tab-panel.active { display: block; }
 
 /* --- STAT CARDS --- */
-.metric-stack, .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 7px; }
+.metric-stack, .stat-grid, .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 7px; }
 .stat-box, .stat-card, .metric-card {
   background: var(--card-bg);
   border: 1px solid var(--border-mid);
@@ -188,9 +188,125 @@ main, .main, .shell {
   color: var(--white);
   font-family: var(--font);
 }
-.stat-sub, .stat-card small, .metric-sub {
+.stat-sub, .stat-card small, .metric-sub, .metric-subtle {
   font-size: 8px;
   color: var(--border-bright);
+}
+
+.empty-state {
+  background: var(--card-bg);
+  border: 1px solid var(--border-mid);
+  color: var(--text-muted);
+  font-size: 10px;
+  padding: 8px;
+}
+
+.meta-list, .stack, .file-list {
+  display: grid;
+  gap: 5px;
+}
+
+.meta-line, .list-row, .file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-secondary);
+  font-size: 10px;
+  padding: 4px 0;
+}
+
+.meta-line strong, .list-row strong {
+  color: var(--white);
+  font-size: 10px;
+  text-align: right;
+}
+
+.pill {
+  border: 1px solid var(--border-bright);
+  color: var(--text-secondary);
+  display: inline-block;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 5px;
+  text-transform: uppercase;
+}
+.pill-good { border-color: rgba(0, 221, 51, .45); color: var(--green); }
+.pill-warn, .pill-info { border-color: rgba(255, 170, 0, .45); color: var(--amber); }
+.pill-bad { border-color: rgba(204, 34, 0, .55); color: var(--red); }
+
+.signal-table, .table, .source-table {
+  display: grid;
+  font-size: 10px;
+}
+
+.signal-head, .signal-row,
+.table-head, .table-row,
+.source-head, .source-row {
+  display: grid;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-dim);
+  align-items: center;
+}
+
+.signal-head, .signal-row { grid-template-columns: 1.2fr .7fr .7fr .7fr .7fr; }
+.table-head, .table-row { grid-template-columns: 1.4fr .7fr .8fr .7fr; }
+.source-head, .source-row { grid-template-columns: 1fr .55fr 1.4fr; }
+
+.signal-head, .table-head, .source-head {
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.signal-row, .table-row, .source-row { color: var(--text-secondary); }
+.signal-row strong { color: var(--orange-glow); }
+.positive { color: var(--green); }
+.negative { color: var(--red); }
+.warning { color: var(--amber); }
+
+.feature-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 2fr 54px;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 10px;
+  padding: 4px 0;
+}
+
+.bar-rail {
+  background: #111;
+  border: 1px solid var(--border-mid);
+  height: 7px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  background: var(--orange);
+  height: 100%;
+}
+
+.cluster-card, .issue-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-mid);
+  padding: 7px 8px;
+}
+
+.cluster-card h4, .issue-card h4 {
+  color: var(--orange);
+  font-size: 10px;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.issue-card p, .muted {
+  color: var(--text-secondary);
+  font-size: 10px;
 }
 
 /* --- COLOR SEMANTICS --- */
