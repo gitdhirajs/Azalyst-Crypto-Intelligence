@@ -16,6 +16,7 @@ const WORKFLOW_CARDS = [
 
 const els = {
   liveStatus: document.getElementById("liveStatus"),
+  liveDot: document.getElementById("liveDot"),
   clockValue: document.getElementById("clockValue"),
   repoVisibility: document.getElementById("repoVisibility"),
   headlineText: document.getElementById("headlineText"),
@@ -60,6 +61,7 @@ function setLivePill(label, tone = "warn") {
   // tone: "live" | "warn" | "dead"
   els.liveStatus.className = `status-dot ${tone}`;
   els.liveStatus.textContent = label;
+  els.liveDot?.classList.toggle("on", tone === "live");
 }
 
 // ── Formatting helpers (unchanged) ──────────────────────────────────
@@ -195,7 +197,7 @@ function renderTicker(repo, runtimeStatus, latestWorkflows) {
     const run = findLatestRun(latestWorkflows, item.names);
     if (run) items.push(`${item.label.toUpperCase()} ${run.conclusion || run.status}`);
   }
-  els.tickerTape.innerHTML = items.map((item) => `<span>${item}</span>`).join("");
+  els.tickerTape.innerHTML = [...items, ...items].map((item) => `<span>${item}</span>`).join("");
 }
 
 function renderWorkflowCards(runs) {

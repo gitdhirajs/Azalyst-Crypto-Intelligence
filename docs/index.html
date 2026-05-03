@@ -1,255 +1,451 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Azalyst Crypto Intelligence</title>
-  <meta name="description"
-    content="Azalyst Crypto Intelligence — runtime health, ML training snapshots, multi-engine consensus signals, and GitHub Actions telemetry.">
-  <meta name="theme-color" content="#000000">
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AZALYST | Crypto Intelligence</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:13px}
+body{background:#000;color:#ff6600;font-family:'Courier New',monospace;min-height:100vh;overflow-x:hidden;min-width:1100px}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,102,0,0.02) 3px,rgba(255,102,0,0.02) 4px);pointer-events:none;z-index:9998}
+.topbar{background:#000;border-bottom:1px solid #1a1a1a;padding:0 12px;height:38px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-size:13px;font-weight:700;letter-spacing:.18em;color:#ff6600;display:flex;align-items:center;gap:8px}
+.logo span{color:#666;font-weight:400;font-size:10px;letter-spacing:.12em}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#333;display:inline-block}
+.live-dot.on{background:#00dd33;animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+.tabs{display:flex;gap:1px;margin-left:16px}
+.tab{background:transparent;border:none;color:#555;font-family:'Courier New',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;padding:5px 12px;cursor:pointer;text-transform:uppercase;transition:.1s}
+.tab:hover{color:#ff9900}
+.tab.active{color:#000;background:#ff6600}
+.topbar-right{display:flex;align-items:center;gap:8px}
+#clock{font-size:10px;color:#444;letter-spacing:.06em}
+#macroRegime{font-size:10px;font-weight:700;text-transform:uppercase;margin-left:6px}
+#macroRegime.risk-on{color:#00dd33}
+#macroRegime.risk-off{color:#cc2200}
+#macroRegime.neutral{color:#888}
+.offline-badge{font-size:9px;color:#553300;letter-spacing:.1em}
+.live-badge{font-size:9px;color:#00dd33;letter-spacing:.1em}
+.stale-badge{font-size:9px;color:#cc7700;letter-spacing:.1em}
+input.repo-in{background:#000;border:1px solid #333;color:#ff9900;font-family:'Courier New',monospace;font-size:10px;padding:4px 8px;outline:none}
+input.repo-in:focus{border-color:#ff6600}
+.btn{background:#0a0a0a;border:1px solid #ff6600;color:#ff6600;font-family:'Courier New',monospace;font-size:9px;letter-spacing:.1em;padding:4px 12px;cursor:pointer;text-transform:uppercase;font-weight:700}
+.btn:hover{background:#ff6600;color:#000}
+#countdown{font-size:9px;color:#333}
+.tape{background:#050505;border-bottom:1px solid #111;height:22px;display:flex;align-items:center;overflow:hidden}
+.tape-label{font-size:9px;color:#ff6600;font-weight:700;letter-spacing:.15em;padding:0 14px;border-right:1px solid #1a1a1a;white-space:nowrap;height:100%;display:flex;align-items:center}
+.tape-track{flex:1;overflow:hidden}
+.tape-inner{display:flex;gap:32px;white-space:nowrap;animation:scroll 50s linear infinite}
+.tape-inner:hover{animation-play-state:paused}
+@keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.tape-item{font-size:9px;letter-spacing:.04em}
+.tape-pump{color:#00dd33}
+.tape-dump{color:#cc2200}
+.tape-sep{color:#333}
+.page{display:none;padding:10px 14px}
+.page.active{display:block}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.g32{display:grid;grid-template-columns:3fr 2fr;gap:8px}
+.panel{background:#0a0a0a;border:1px solid #1a1a1a}
+.ph{color:#ff6600;font-weight:700;font-size:10px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid #111;padding:6px 10px;display:flex;justify-content:space-between;align-items:center}
+.empty{padding:20px;text-align:center;color:#333;font-size:10px}
+.mgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:10px}
+.stat-box{background:#050505;border:1px solid #1a1a1a;padding:6px 10px}
+.stat-label{color:#444;font-size:8px;text-transform:uppercase;letter-spacing:.1em}
+.stat-val{font-size:20px;font-weight:700;color:#fff;margin:3px 0 2px;line-height:1}
+.stat-val.up{color:#00dd33}
+.stat-val.dn{color:#cc2200}
+.stat-sub{font-size:9px;color:#333}
+.sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.sh-label{font-size:9px;font-weight:700;letter-spacing:.1em;color:#ff6600;text-transform:uppercase}
+.sh-meta{font-size:9px;color:#333}
+.row{display:flex;align-items:center;gap:8px;padding:4px 10px;border-bottom:1px solid #0d0d0d;font-size:10px}
+.row:last-child{border-bottom:none}
+.row:hover{background:#0d0d0d}
+.chain-tag{font-size:8px;font-weight:700;padding:2px 4px;text-transform:uppercase;flex-shrink:0}
+.c-solana{color:#c09aff;background:rgba(153,69,255,.12)}
+.c-ethereum{color:#9aaeff;background:rgba(98,126,234,.12)}
+.c-base{color:#6699ff;background:rgba(0,82,255,.1)}
+.c-arbitrum{color:#60c0f0;background:rgba(40,160,240,.1)}
+.c-bnb{color:#f0d060;background:rgba(240,185,11,.1)}
+.c-avalanche{color:#f07070;background:rgba(232,65,66,.1)}
+.c-polygon{color:#b090f0;background:rgba(130,71,229,.1)}
+.c-optimism{color:#ff7080;background:rgba(255,4,32,.1)}
+.c-zksync{color:#80a0ff;background:rgba(54,103,246,.1)}
+.c-unknown{color:#444;background:rgba(50,80,100,.15)}
+.tok{font-weight:700;color:#ff9900;font-size:11px;flex-shrink:0}
+.ind{color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:10px}
+.addr{color:#444;font-size:9px}
+.val{color:#fff;font-size:11px;text-align:right;flex-shrink:0}
+.sig-p{color:#00dd33;font-size:9px;font-weight:700;flex-shrink:0}
+.sig-d{color:#cc2200;font-size:9px;font-weight:700;flex-shrink:0}
+.conf-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;width:48px}
+.conf-n{font-size:10px;color:#fff}
+.conf-bar{height:2px;width:100%;background:#111}
+.cf-p{height:100%;background:#00aa2a}
+.cf-d{height:100%;background:#cc2200}
+.pill{font-size:8px;font-weight:700;padding:2px 6px;letter-spacing:.06em;text-transform:uppercase;flex-shrink:0}
+.p-ok{background:rgba(0,221,51,.12);color:#00dd33}
+.p-fail{background:rgba(204,34,0,.12);color:#cc2200}
+.p-run{background:rgba(59,158,255,.1);color:#60a0ff}
+.p-nu{background:rgba(204,119,0,.1);color:#cc7700}
+.p-scam{background:rgba(255,68,68,.15);color:#ff4444}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:14px;height:14px;padding:0 3px;font-size:8px;background:#111;color:#555;margin-left:4px}
+.badge.live{background:#0a1a0a;color:#00dd33}
+.badge.warn{background:#1a0000;color:#ff4444}
+.ml-prob-cell{font-size:10px;color:#ff9900;display:flex;align-items:center;gap:4px;width:55px;justify-content:flex-end}
+.prob-bar{display:inline-block;height:3px;background:#ff6600;border-radius:1px}
+.heatmap{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:6px}
+.hm-cell{background:#050505;border:1px solid #1a1a1a;padding:10px 12px;position:relative}
+.hm-cell.dim{opacity:.35}
+.hm-cell::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:#111}
+.hm-cell.hot-pump::after{background:#00aa2a}
+.hm-cell.hot-dump::after{background:#cc2200}
+.hm-cell.hot-both::after{background:linear-gradient(90deg,#00aa2a 50%,#cc2200 50%)}
+.hm-name{font-size:9px;font-weight:700;color:#ff9900;letter-spacing:.08em;margin-bottom:6px}
+.hm-nums{display:flex;gap:14px}
+.hm-p{font-size:15px;font-weight:700;color:#00dd33;line-height:1}
+.hm-d{font-size:15px;font-weight:700;color:#cc2200;line-height:1}
+.hm-sub{font-size:8px;color:#333;margin-top:2px}
+.hm-bar{margin-top:6px;height:2px;background:#0d0d0d;display:flex}
+.hm-bp{background:#00aa2a}
+.hm-bd{background:#cc2200}
+.feed{max-height:360px;overflow-y:auto}
+.feed-row{display:flex;gap:8px;align-items:flex-start;padding:4px 10px;border-bottom:1px solid #0d0d0d;font-size:10px}
+.feed-time{color:#333;white-space:nowrap;font-size:9px;padding-top:1px;flex-shrink:0;min-width:55px}
+.feed-tag{font-size:8px;font-weight:700;padding:1px 5px;text-transform:uppercase;flex-shrink:0}
+.ft-pump{color:#00dd33;background:rgba(0,221,51,.08)}
+.ft-dump{color:#cc2200;background:rgba(204,34,0,.08)}
+.ft-whale{color:#60a0ff;background:rgba(59,158,255,.08)}
+.ft-gem{color:#ff9900;background:rgba(255,153,0,.08)}
+.ft-scan{color:#444;background:rgba(50,80,100,.12)}
+.rpt-list{max-height:400px;overflow-y:auto;border:1px solid #1a1a1a}
+.rpt-row{display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid #0d0d0d;cursor:pointer;font-size:10px}
+.rpt-row:hover{background:#0d0d0d}
+.rpt-row.sel{background:#1a0800;border-left:2px solid #ff6600}
+.rpt-name{color:#888}
+.rpt-meta{color:#333;font-size:9px}
+.rpt-content{background:#000;border:1px solid #1a1a1a;padding:12px;font-size:10px;line-height:1.8;white-space:pre-wrap;max-height:480px;overflow-y:auto;color:#888}
+.statusbar{background:#000;border-top:1px solid #111;padding:3px 14px;display:flex;gap:20px;align-items:center;position:sticky;bottom:0;z-index:100}
+.sb-item{font-size:9px;color:#333;letter-spacing:.06em}
+.sb-val{color:#555}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:#1a1a1a}
+</style>
 </head>
-
 <body>
-  <!-- ── Topbar (mirrors ETF Intelligence header) ──────────────────── -->
-  <header class="topbar">
-    <div class="brand-block">
-      <div class="brand-mark">AZALYST</div>
-      <div class="brand-sub">
-        <h1>CRYPTO INTELLIGENCE</h1>
-        <p>Perp scanner · ML signals · Engine consensus</p>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center">
+    <div class="logo"><span class="live-dot" id="liveDot"></span>AZALYST<span>CRYPTO INTELLIGENCE</span></div>
+    <div class="tabs">
+      <button class="tab active" onclick="tab('intel',this)">Intelligence<span class="badge live" id="bIntel">—</span></button>
+      <button class="tab" onclick="tab('whales',this)">Whales<span class="badge" id="bWhale">—</span></button>
+      <button class="tab" onclick="tab('gems',this)">Gems<span class="badge" id="bGem">—</span></button>
+      <button class="tab" onclick="tab('security',this)">Security<span class="badge warn" id="bSecurity">—</span></button>
+      <button class="tab" onclick="tab('ml',this)">ML<span class="badge" id="bML">—</span></button>
+      <button class="tab" onclick="tab('chains',this)">Chain Map</button>
+      <button class="tab" onclick="tab('feed',this)">Live Feed<span class="badge live" id="bFeed">—</span></button>
+      <button class="tab" onclick="tab('mempool',this)">Mempool<span class="badge" id="bMempool">—</span></button>
+      <button class="tab" onclick="tab('reports',this)">Reports<span class="badge" id="bReports">—</span></button>
+      <button class="tab" onclick="tab('ops',this)">System</button>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span id="clock">--:--:-- IST</span>
+    <span id="macroRegime" class="neutral">NEUTRAL</span>
+    <span id="dataStatus" class="offline-badge">OFFLINE</span>
+    <span id="countdown">—</span>
+    <input class="repo-in" id="repoIn" placeholder="owner/repository" value="gitdhirajs/Azalyst-Crypto-Intelligence"/>
+    <input class="repo-in" id="tokenIn" placeholder="PAT (private)" type="password" style="width:130px"/>
+    <button class="btn" onclick="init()">LOAD</button>
+  </div>
+</div>
+
+<div class="tape">
+  <div class="tape-label">AZALYST</div>
+  <div class="tape-track">
+    <div class="tape-inner" id="tapeInner"><span class="tape-item tape-sep"> awaiting scan data </span></div>
+  </div>
+</div>
+
+<div class="page active" id="tab-intel">
+  <div class="mgrid">
+    <div class="stat-box"><div class="stat-label">Scanner Status</div><div class="stat-val up" id="sPump" style="font-size:14px">OFFLINE</div><div class="stat-sub">runtime</div></div>
+    <div class="stat-box"><div class="stat-label">Model Health</div><div class="stat-val dn" id="sDump" style="font-size:14px">STALE</div><div class="stat-sub">training</div></div>
+    <div class="stat-box"><div class="stat-label">Active Signals</div><div class="stat-val" id="sWhale">—</div><div class="stat-sub">this cycle</div></div>
+    <div class="stat-box"><div class="stat-label">Accuracy</div><div class="stat-val" id="sGem">—</div><div class="stat-sub">ROC AUC</div></div>
+    <div class="stat-box"><div class="stat-label">Symbols</div><div class="stat-val" id="sChain">—</div><div class="stat-sub">monitored</div></div>
+    <div class="stat-box"><div class="stat-label">Last Update</div><div class="stat-val" id="sLast" style="font-size:12px;padding-top:4px">—</div><div class="stat-sub" id="sNext">next: —</div></div>
+  </div>
+  <div class="g32">
+    <div>
+      <div class="sh"><span class="sh-label">Live Signals (ML Scored)</span><span class="sh-meta" id="pumpMeta">sorted by continuation probability</span></div>
+      <div class="panel"><div class="ph"><span>Chain / Token / ML Prob / Direction / Signal</span><span id="pumpCount">0</span></div><div id="pumpList"><div class="empty">Load a repository to see signals.</div></div></div>
+    </div>
+    <div>
+      <div class="sh"><span class="sh-label">24H Scanner Watchlist</span></div>
+      <div class="panel"><div class="ph"><span>Token / RSI / 24H % / OI / State</span><span id="dumpCount">0</span></div><div id="dumpList"><div class="empty">—</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Whales tab adapted for Crypto -->
+<div class="page" id="tab-whales">
+  <div class="sh"><span class="sh-label">Volume Outliers</span><span class="sh-meta">high volume relative to 6h average</span></div>
+  <div class="panel"><div class="ph"><span>Token / Vol Ratio / 24H Vol / RSI 1H</span><span id="whaleCount">0</span></div><div id="whaleList"><div class="empty">No data yet.</div></div></div>
+</div>
+
+<div class="page" id="tab-gems">
+  <div class="sh"><span class="sh-label">Opportunity Scan</span><span class="sh-meta">high probability continuations</span></div>
+  <div class="panel"><div class="ph"><span>Token / ML Prob / RSI 1H / OI Change</span><span id="gemCount">0</span></div><div id="gemList"><div class="empty">No data yet.</div></div></div>
+</div>
+
+<div class="page" id="tab-security">
+  <div class="sh"><span class="sh-label">Runtime Notes</span><span class="sh-meta">operational issues and blocks</span></div>
+  <div class="panel"><div class="ph"><span>Category / Note</span><span id="securityCount">0</span></div><div id="securityList"><div class="empty">No open notes.</div></div></div>
+</div>
+
+<div class="page" id="tab-ml">
+  <div class="sh"><span class="sh-label">ML Model Metrics</span><span class="sh-meta" id="mlMeta">XGBoost pattern learning</span></div>
+  <div class="mgrid">
+    <div class="stat-box"><div class="stat-label">Model Status</div><div class="stat-val" id="mlStatus" style="font-size:12px;padding-top:4px">—</div><div class="stat-sub" id="mlTrained">—</div></div>
+    <div class="stat-box"><div class="stat-label">ROC AUC</div><div class="stat-val" id="mlAuc">—</div><div class="stat-sub" id="mlF1">f1: —</div></div>
+    <div class="stat-box"><div class="stat-label">Accuracy</div><div class="stat-val" id="mlLabeled">—</div><div class="stat-sub" id="mlPosRate">baseline: —</div></div>
+    <div class="stat-box"><div class="stat-label">Samples</div><div class="stat-val" id="mlEvents">—</div><div class="stat-sub" id="mlSnaps">total rows: —</div></div>
+    <div class="stat-box"><div class="stat-label">Features</div><div class="stat-val" id="mlClusters" style="font-size:10px;padding-top:4px">—</div><div class="stat-sub">top driver</div></div>
+    <div class="stat-box"><div class="stat-label">Window</div><div class="stat-val" id="mlPatCount">—</div><div class="stat-sub">target hours</div></div>
+  </div>
+  <div class="g32">
+    <div>
+      <div class="sh"><span class="sh-label">Top Features</span><span class="sh-meta" id="mlSigMeta">XGBoost importance</span></div>
+      <div class="panel"><div class="ph"><span>Feature / Importance / Rank</span><span id="mlSigCount">0</span></div><div id="mlSigList"><div class="empty">No importance data yet.</div></div></div>
+    </div>
+    <div>
+      <div class="sh"><span class="sh-label">Bucket Analysis (RSI)</span><span class="sh-meta">RSI range → continuation rate</span></div>
+      <div class="panel"><div class="ph"><span>Bucket / Count / Cont. Rate</span><span id="mlPatListCount">0</span></div><div id="mlPatList"><div class="empty">No buckets yet.</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="tab-chains">
+  <div class="sh"><span class="sh-label">Operational Overview</span><span class="sh-meta">system health matrix</span></div>
+  <div class="panel"><div class="ph">Components and data source health</div><div class="heatmap" id="chainMap"><div class="empty" style="grid-column:1/-1">Load a repository first.</div></div></div>
+</div>
+
+<div class="page" id="tab-feed">
+  <div class="g2">
+    <div>
+      <div class="sh"><span class="sh-label">Telemetry Feed</span><span class="sh-meta" id="feedMeta">—</span></div>
+      <div class="panel"><div class="ph">Type / Time / Event</div><div class="feed" id="liveFeed"><div class="empty">No events yet.</div></div></div>
+    </div>
+    <div>
+      <div class="sh"><span class="sh-label">System Logs</span></div>
+      <div class="panel"><div class="ph">Workflow / Status / Duration</div><div id="runList"><div class="empty">—</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="tab-mempool">
+  <div class="sh"><span class="sh-label">Runtime Artifacts</span><span class="sh-meta" id="mempoolMeta">files in reports directory</span></div>
+  <div class="panel"><div class="ph"><span>Filename / Link</span></div><div id="mempoolList"><div class="empty">No files detected.</div></div></div>
+</div>
+
+<div class="page" id="tab-reports">
+  <div class="g32">
+    <div>
+      <div class="sh"><span class="sh-label">JSON Payloads</span><span class="sh-meta" id="rptMeta">—</span></div>
+      <div class="rpt-list" id="rptList"><div class="empty">—</div></div>
+    </div>
+    <div>
+      <div class="sh"><span class="sh-label">Preview</span></div>
+      <div class="rpt-content" id="rptContent">Select a report.</div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="tab-ops">
+  <div class="g2">
+    <div>
+      <div class="sh"><span class="sh-label">GitHub Actions</span></div>
+      <div class="panel"><div class="ph">Workflow / Status / Duration</div><div id="opsList"><div class="empty">—</div></div></div>
+    </div>
+    <div>
+      <div class="sh"><span class="sh-label">Data Sources</span></div>
+      <div class="panel">
+        <div class="ph">Source settings</div>
+        <div class="row"><span style="color:#444;font-size:9px;letter-spacing:.08em">BRANCH</span><span style="color:#888">runtime-data</span></div>
+        <div class="row"><span style="color:#444;font-size:9px;letter-spacing:.08em">PROVIDERS</span><span style="color:#888" id="opsChains">KuCoin, Bitget, OKX</span></div>
+        <div class="row"><span style="color:#444;font-size:9px;letter-spacing:.08em">MODE</span><span style="color:#888" id="opsUniverse">Serverless Dashboard</span></div>
+        <div class="row"><span style="color:#444;font-size:9px;letter-spacing:.08em">REFRESH</span><span style="color:#888">60s</span></div>
+        <div class="row"><span style="color:#444;font-size:9px;letter-spacing:.08em">MAINTAINED BY</span><a href="https://github.com/gitdhirajs" target="_blank" style="color:#ff6600;text-decoration:none">@gitdhirajs</a></div>
       </div>
     </div>
-    <div class="topbar-meta">
-      <!-- Live status dot — same pattern as ETF "● LIVE / ● OFFLINE" -->
-      <span id="liveStatus" class="status-dot warn">LOADING</span>
-      <span id="clockValue" class="meta-value">--:--:-- IST</span>
-    </div>
-  </header>
-
-  <!-- ── Ticker tape ─────────────────────────────────────────────────── -->
-  <div class="ticker" role="marquee" aria-label="Live scanner data ticker">
-    <div id="tickerTape" class="ticker-track">Connecting to runtime telemetry...</div>
   </div>
+</div>
 
-  <!-- ── Tab bar (matches ETF style) ──────────────────────────────────── -->
-  <nav class="tabbar" aria-label="Dashboard sections">
-    <button class="tab active" data-tab="overview">Market Data</button>
-    <button class="tab" data-tab="models">Models</button>
-    <button class="tab" data-tab="ops">Operations</button>
-  </nav>
+<div class="statusbar">
+  <span class="sb-item">SCAN <span class="sb-val">every 15min</span></span>
+  <span class="sb-item">ML <span class="sb-val">every 2h</span></span>
+  <span class="sb-item">REFRESH <span class="sb-val">60s</span></span>
+  <span class="sb-item" id="sbRepo">REPO <span class="sb-val">gitdhirajs/Azalyst-Crypto-Intelligence</span></span>
+  <span style="flex:1"></span>
+  <span class="sb-item" style="color:#222">AZALYST CRYPTO INTELLIGENCE</span>
+</div>
 
-  <!-- ── Main shell ─────────────────────────────────────────────────── -->
-  <main class="shell">
+<script>
+const S={repo:'gitdhirajs/Azalyst-Crypto-Intelligence',token:'',runs:[],reports:[],parsed:null,feed:[],ml:null,refreshTimer:null,countdown:60};
 
-    <!-- ══ OVERVIEW TAB ═══════════════════════════════════════════════ -->
-    <section class="tab-panel active" id="tab-overview">
+function updateClock(){const n=new Date(),ist=new Date(n.getTime()+(5.5*3600000));const h=ist.getUTCHours().toString().padStart(2,'0'),m=ist.getUTCMinutes().toString().padStart(2,'0'),s=ist.getUTCSeconds().toString().padStart(2,'0');document.getElementById('clock').textContent=`${h}:${m}:${s} IST`;}
+setInterval(updateClock,1000);updateClock();
 
-      <!-- Hero row: 3 columns -->
-      <section class="grid hero-grid">
+function gh(p){const h={'Accept':'application/vnd.github+json'};if(S.token)h['Authorization']=`Bearer ${S.token}`;return fetch(`https://api.github.com/repos/${S.repo}${p}`,{headers:h});}
+function ghRaw(p){const h={};if(S.token)h['Authorization']=`Bearer ${S.token}`;return fetch(`https://raw.githubusercontent.com/${S.repo}/runtime-data/${p}`,{headers:h});}
 
-        <article class="panel panel-hero">
-          <div class="panel-header">
-            <span>System Pulse</span>
-            <span id="repoVisibility" class="micro-copy">PUBLIC REPO</span>
-          </div>
-          <div class="hero-stack">
-            <div>
-              <p class="kicker">Repository</p>
-              <div class="hero-title">gitdhirajs / azalyst-crypto-intelligence</div>
-            </div>
-            <p id="headlineText" class="hero-copy">
-              Waiting for runtime status and model snapshots...
-            </p>
-            <div class="hero-actions">
-              <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank"
-                rel="noreferrer">Repo</a>
-              <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions"
-                target="_blank" rel="noreferrer">Actions</a>
-              <a class="action-link" href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data"
-                target="_blank" rel="noreferrer">Runtime Data</a>
-              <a class="action-link" href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank"
-                rel="noreferrer">ETF Dashboard ↗</a>
-            </div>
-          </div>
-        </article>
+function rel(d){if(!d)return'—';const m=Math.floor((Date.now()-new Date(d))/60000);if(m<1)return'just now';if(m<60)return`${m}m ago`;const h=Math.floor(m/60);if(h<24)return`${h}h ago`;return`${Math.floor(h/24)}d ago`;}
+function usd(v){const n=parseFloat(v);if(isNaN(n))return'—';if(n>=1e6)return`$${(n/1e6).toFixed(1)}M`;if(n>=1e3)return`$${(n/1e3).toFixed(0)}K`;return`$${n.toFixed(0)}`;}
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Automation</span>
-            <span class="micro-copy">GITHUB ACTIONS</span>
-          </div>
-          <div id="workflowCards" class="metric-stack"></div>
-        </article>
+function addFeed(type,text,time){S.feed.unshift({type,text,time:time||new Date().toISOString()});if(S.feed.length>200)S.feed.pop();}
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Runtime Scan</span>
-            <span id="runtimeSourceTag" class="micro-copy">RUNTIME-DATA</span>
-          </div>
-          <div id="runtimeStatusCard" class="metric-stack"></div>
-        </article>
+function renderAll(data){
+  if(!data)return;
+  const rs = data.runtime_status || {};
+  const scanner = rs.scanner || {};
+  const hm = rs.hourly_model || {};
+  const hr = data.hourly_report || {};
+  const signals = hr.top_live_signals || [];
+  const scans = data.latest_scan_signals || [];
 
-      </section>
+  document.getElementById('sPump').textContent = (scanner.status || 'OFFLINE').toUpperCase();
+  document.getElementById('sDump').textContent = (hm.status || 'STALE').toUpperCase();
+  document.getElementById('sWhale').textContent = signals.length || 0;
+  document.getElementById('sGem').textContent = hm.roc_auc != null ? hm.roc_auc.toFixed(3) : '—';
+  document.getElementById('sChain').textContent = scans.length || 0;
+  document.getElementById('sLast').textContent = rel(data.generated_at);
+  
+  document.getElementById('bIntel').textContent = signals.length;
+  document.getElementById('bIntel').className = 'badge' + (signals.length > 0 ? ' live' : '');
+  document.getElementById('bWhale').textContent = scans.filter(s => s.volume_24h > 50000000).length;
+  document.getElementById('bGem').textContent = signals.filter(s => s.continuation_probability > 0.2).length;
+  document.getElementById('bML').textContent = hr.top_features ? hr.top_features.length : '—';
 
-      <!-- Model cards row -->
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Main Scanner Model</span>
-            <span id="mainModelSource" class="micro-copy">BOOTSTRAP</span>
-          </div>
-          <div id="mainModelCard"></div>
-        </article>
+  // Signals List
+  document.getElementById('pumpCount').textContent = signals.length;
+  document.getElementById('pumpList').innerHTML = signals.length
+    ? signals.map(s => {
+        const prob = Math.round(s.continuation_probability * 100);
+        return `<div class="row"><span class="addr">CRYPTO</span><span class="tok">${s.symbol}</span><div class="conf-wrap"><div class="conf-n">${prob}%</div><div class="conf-bar"><div class="cf-p" style="width:${prob}%"></div></div></div><span class="pill ${s.continuation_prediction ? 'p-ok' : 'p-nu'}">${s.continuation_prediction ? 'BUY' : 'HOLD'}</span><span class="sig-p">SIGNAL</span></div>`;
+      }).join('')
+    : '<div class="empty">No live signals.</div>';
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Hourly Candle Model</span>
-            <span id="hourlyModelSource" class="micro-copy">BOOTSTRAP</span>
-          </div>
-          <div id="hourlyModelCard"></div>
-        </article>
-      </section>
+  // Watchlist
+  document.getElementById('dumpCount').textContent = scans.length;
+  document.getElementById('dumpList').innerHTML = scans.length
+    ? scans.slice(0, 15).map(s => `<div class="row"><span class="tok">${s.symbol}</span><span class="addr">RSI:${s.rsi_1h || '—'}</span><span class="val ${s.price_change_pct_24h >= 0 ? 'up' : 'dn'}">${s.price_change_pct_24h || 0}%</span><span class="addr">Vol:${usd(s.volume_24h)}</span><span class="pill p-run">SCAN</span></div>`).join('')
+    : '<div class="empty">No scan data.</div>';
 
-      <!-- Signals + summary row -->
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>1H Live Signal Watchlist</span>
-            <span class="micro-copy">TOP CONTINUATION PROBABILITY</span>
-          </div>
-          <div id="hourlySignalsTable"></div>
-        </article>
+  // ML Tab
+  document.getElementById('mlStatus').textContent = (hr.status || 'unknown').toUpperCase();
+  document.getElementById('mlTrained').textContent = rel(hr.timestamp);
+  document.getElementById('mlAuc').textContent = hr.roc_auc != null ? hr.roc_auc.toFixed(3) : '—';
+  document.getElementById('mlF1').textContent = 'f1: ' + (hr.f1_score != null ? hr.f1_score.toFixed(3) : '—');
+  document.getElementById('mlLabeled').textContent = hr.accuracy != null ? hr.accuracy.toFixed(3) : '—';
+  document.getElementById('mlPosRate').textContent = 'baseline: ' + (hr.baseline_accuracy != null ? hr.baseline_accuracy.toFixed(3) : '—');
+  document.getElementById('mlEvents').textContent = hr.n_samples || 0;
+  document.getElementById('mlSnaps').textContent = 'symbols: ' + (hr.n_symbols || 0);
+  document.getElementById('mlClusters').textContent = hr.top_features ? hr.top_features[0][0] : '—';
+  document.getElementById('mlPatCount').textContent = hr.continuation_window_hours + 'h';
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Latest Summary</span>
-            <span class="micro-copy">MARKDOWN PREVIEW</span>
-          </div>
-          <pre id="summaryPreview" class="summary-box">Loading summary...</pre>
-        </article>
-      </section>
+  // Features
+  document.getElementById('mlSigList').innerHTML = hr.top_features
+    ? hr.top_features.slice(0, 10).map((f, i) => `<div class="row"><span class="tok">${f[0]}</span><span class="val">${f[1].toFixed(4)}</span><span class="addr">RANK ${i+1}</span></div>`).join('')
+    : '<div class="empty">No features.</div>';
 
-    </section>
+  // Buckets
+  const rsiBuckets = hr.bucket_analysis?.rsi_1h?.top_continuation_ranges || [];
+  document.getElementById('mlPatList').innerHTML = rsiBuckets.length
+    ? rsiBuckets.map(b => `<div class="row"><span class="tok">${b.bucket}</span><span class="val">${b.count}</span><span class="pill p-ok">${Math.round(b.continuation_rate*100)}%</span></div>`).join('')
+    : '<div class="empty">No buckets.</div>';
 
-    <!-- ══ MODELS TAB ════════════════════════════════════════════════ -->
-    <section class="tab-panel" id="tab-models">
+  // Whales (Vol outliers)
+  const outliers = scans.filter(s => s.volume_24h > 10000000).sort((a,b) => b.volume_24h - a.volume_24h);
+  document.getElementById('whaleCount').textContent = outliers.length;
+  document.getElementById('whaleList').innerHTML = outliers.length
+    ? outliers.slice(0, 15).map(s => `<div class="row"><span class="tok">${s.symbol}</span><span class="val">RATIO —</span><span class="val">${usd(s.volume_24h)}</span><span class="addr">RSI:${s.rsi_1h}</span></div>`).join('')
+    : '<div class="empty">No outliers.</div>';
 
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Main Model Feature Stack</span>
-            <span class="micro-copy">XGBOOST PERMUTATION IMPORTANCE</span>
-          </div>
-          <div id="mainFeatures"></div>
-        </article>
+  // Feed
+  if(scanner.status) addFeed('scan', `Scanner ${scanner.status} | ${scans.length} symbols | ${signals.length} signals`, data.generated_at);
+  renderFeed();
+}
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Hourly Model Feature Stack</span>
-            <span class="micro-copy">PATTERN IMPORTANCE</span>
-          </div>
-          <div id="hourlyFeatures"></div>
-        </article>
-      </section>
+function renderFeed(){
+  const el = document.getElementById('liveFeed');
+  el.innerHTML = S.feed.map(f => `<div class="feed-row"><span class="feed-time">${rel(f.time)}</span><span class="feed-tag ft-scan">EVENT</span><span style="color:#555;flex:1">${f.text}</span></div>`).join('') || '<div class="empty">No events.</div>';
+}
 
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Main Scanner Clusters</span>
-            <span class="micro-copy">GAINER / LOSER REGIMES</span>
-          </div>
-          <div id="mainClusters"></div>
-        </article>
+async function init(){
+  const repo = document.getElementById('repoIn').value.trim();
+  S.repo = repo;
+  setStatus('loading');
+  try {
+    const [payload, tree, workflow] = await Promise.all([
+      ghRaw('reports/latest_dashboard_payload.json').then(r => r.json()),
+      gh('/git/trees/main?recursive=1').then(r => r.json()),
+      gh('/actions/runs?per_page=10').then(r => r.json())
+    ]);
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Hourly Pattern Clusters</span>
-            <span class="micro-copy">CONTINUATION / FAILURE</span>
-          </div>
-          <div id="hourlyClusters"></div>
-        </article>
-      </section>
+    S.reports = (tree.tree || []).filter(f => f.path.startsWith('reports/')).sort((a,b) => b.path.localeCompare(a.path));
+    S.runs = workflow.workflow_runs || [];
+    
+    renderAll(payload);
+    renderReports();
+    renderWorkflowTable();
+    setStatus('live');
+  } catch(e) {
+    setStatus('error');
+    console.error(e);
+  }
+}
 
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Main Scanner Buckets</span>
-            <span class="micro-copy">RANGE LEARNING</span>
-          </div>
-          <div id="mainBuckets"></div>
-        </article>
+function renderReports(){
+  document.getElementById('bReports').textContent = S.reports.length;
+  document.getElementById('rptList').innerHTML = S.reports.slice(0,20).map(f => `<div class="rpt-row" onclick="loadRpt('${f.path}',this)"><span class="rpt-name">${f.path.split('/').pop()}</span></div>`).join('');
+}
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Hourly Continuation Buckets</span>
-            <span class="micro-copy">CANDLE RANGE LEARNING</span>
-          </div>
-          <div id="hourlyBuckets"></div>
-        </article>
-      </section>
+async function loadRpt(path, el){
+  document.querySelectorAll('.rpt-row').forEach(e => e.classList.remove('sel')); el?.classList.add('sel');
+  document.getElementById('rptContent').textContent = 'Loading...';
+  try {
+    const r = await ghRaw(path);
+    const text = await r.text();
+    document.getElementById('rptContent').textContent = text;
+  } catch(e) { document.getElementById('rptContent').textContent = 'Error loading report.'; }
+}
 
-    </section>
+function renderWorkflowTable(){
+  const html = S.runs.map(r => `<div class="row"><span class="addr">${r.name}</span><span class="pill ${r.conclusion==='success'?'p-ok':'p-fail'}">${r.conclusion||r.status}</span><span class="addr">${rel(r.created_at)}</span></div>`).join('');
+  document.getElementById('opsList').innerHTML = html;
+  document.getElementById('runList').innerHTML = html;
+}
 
-    <!-- ══ OPERATIONS TAB ════════════════════════════════════════════ -->
-    <section class="tab-panel" id="tab-ops">
+function setStatus(s){
+  const dot = document.getElementById('liveDot'), lbl = document.getElementById('dataStatus');
+  if(s==='live'){ dot.classList.add('on'); lbl.textContent='LIVE'; lbl.className='live-badge'; }
+  else if(s==='loading'){ dot.classList.remove('on'); lbl.textContent='LOADING'; lbl.className='stale-badge'; }
+  else { dot.classList.remove('on'); lbl.textContent='OFFLINE'; lbl.className='offline-badge'; }
+}
 
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Recent Workflow Runs</span>
-            <span class="micro-copy">LATEST 8</span>
-          </div>
-          <div id="workflowTable"></div>
-        </article>
+function tab(name, el){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active'); el.classList.add('active');
+}
 
-        <article class="panel">
-          <div class="panel-header">
-            <span>Data Sources</span>
-            <span class="micro-copy">MERGED VIEW</span>
-          </div>
-          <div id="sourceMatrix"></div>
-        </article>
-      </section>
-
-      <section class="grid two-col">
-        <article class="panel">
-          <div class="panel-header">
-            <span>Runtime Branch Files</span>
-            <span class="micro-copy">REPORTS DIRECTORY</span>
-          </div>
-          <div id="runtimeFiles"></div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-header">
-            <span>Known Issues</span>
-            <span class="micro-copy">OPS NOTES</span>
-          </div>
-          <div id="issuesPanel"></div>
-        </article>
-      </section>
-
-    </section>
-
-  </main>
-
-  <!-- ── Footer (matches ETF style) ───────────────────────────────── -->
-  <footer class="footer">
-    <span id="footerStatus">Waiting for data...</span>
-    <span class="footer-links">
-      <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence" target="_blank" rel="noreferrer">Source</a>
-      <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/actions" target="_blank"
-        rel="noreferrer">Runs</a>
-      <a href="https://github.com/gitdhirajs/azalyst-crypto-intelligence/tree/runtime-data" target="_blank"
-        rel="noreferrer">Artifacts</a>
-      <a href="https://gitdhirajsv.github.io/Azalyst-ETF-Intelligence/" target="_blank" rel="noreferrer">ETF Dashboard
-        ↗</a>
-    </span>
-  </footer>
-
-  <script type="module" src="app.js"></script>
+init();
+setInterval(init, 60000);
+</script>
 </body>
-
 </html>
