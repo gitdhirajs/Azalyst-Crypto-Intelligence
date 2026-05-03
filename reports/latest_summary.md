@@ -1,5 +1,5 @@
 # Azalyst Crypto Intelligence v2.1 Summary
 
 ## Hourly Candle Pattern Model
-- Accuracy: 0.9481, F1: 0.015, AUC: 0.7206
-- Samples / symbols: 12617 / 76
+- Accuracy: 0.9484, F1: 0.0157, AUC: 0.7215
+- Samples / symbols: 12119 / 73
