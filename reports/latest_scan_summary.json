@@ -1,17 +1,17 @@
 {
-  "timestamp": "2026-05-02T22:03:05.288565+00:00",
+  "timestamp": "2026-05-03T07:11:12.327321+00:00",
   "status": "healthy",
-  "symbols_attempted": 64,
-  "symbols_scanned": 64,
+  "symbols_attempted": 71,
+  "symbols_scanned": 71,
   "symbols_failed": 0,
   "min_volume_24h_usdt": 5000000.0,
   "request_errors": {
-    "count": 64,
+    "count": 71,
     "status_counts": {
-      "400": 64
+      "400": 71
     },
     "endpoint_counts": {
-      "okx_oi_history": 64
+      "okx_oi_history": 71
     },
     "examples": [
       {
@@ -31,13 +31,6 @@
       {
         "endpoint": "okx_oi_history",
         "status_code": 400,
-        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SKYAI-USDT-SWAP&period=5m&limit=12",
-        "symbol": "SKYAIUSDT",
-        "period": "5m"
-      },
-      {
-        "endpoint": "okx_oi_history",
-        "status_code": 400,
         "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=ETH-USDT-SWAP&period=5m&limit=12",
         "symbol": "ETHUSDT",
         "period": "5m"
@@ -45,15 +38,15 @@
       {
         "endpoint": "okx_oi_history",
         "status_code": 400,
-        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SOL-USDT-SWAP&period=5m&limit=12",
-        "symbol": "SOLUSDT",
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SKYAI-USDT-SWAP&period=5m&limit=12",
+        "symbol": "SKYAIUSDT",
         "period": "5m"
       },
       {
         "endpoint": "okx_oi_history",
         "status_code": 400,
-        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=UB-USDT-SWAP&period=5m&limit=12",
-        "symbol": "UBUSDT",
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=SOL-USDT-SWAP&period=5m&limit=12",
+        "symbol": "SOLUSDT",
         "period": "5m"
       },
       {
@@ -68,6 +61,13 @@
         "status_code": 400,
         "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=ZEC-USDT-SWAP&period=5m&limit=12",
         "symbol": "ZECUSDT",
+        "period": "5m"
+      },
+      {
+        "endpoint": "okx_oi_history",
+        "status_code": 400,
+        "message": "400 Client Error: Bad Request for url: https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?instId=UB-USDT-SWAP&period=5m&limit=12",
+        "symbol": "UBUSDT",
         "period": "5m"
       }
     ]
