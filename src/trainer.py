@@ -262,6 +262,7 @@ def train_model(force: bool = False) -> dict:
 
     # PRIMARY: grouped split (no symbol leak)
     train_idx_g, test_idx_g = _grouped_split(clean, X, y)
+    # Compute scale_pos_weight from the actual training subset
     spw = _compute_scale_pos_weight(y.iloc[train_idx_g])
     served_model, base_model, metrics_grouped = _fit_with_calibration(
         X, y, np.asarray(train_idx_g), np.asarray(test_idx_g), spw,
