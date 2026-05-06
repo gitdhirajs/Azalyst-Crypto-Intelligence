@@ -276,7 +276,8 @@ def train_model(force: bool = False) -> dict:
 
     # Final production model: train on ALL data with class balance,
     # then calibrate via 3-fold CV on the full set.
-    final_model = XGBClassifier(**MODEL_PARAMS, scale_pos_weight=spw)
+    spw_full = _compute_scale_pos_weight(y)
+    final_model = XGBClassifier(**MODEL_PARAMS, scale_pos_weight=spw_full)
     final_model.fit(X, y, verbose=False)
 
     if len(X) >= 150 and y.nunique() > 1:
